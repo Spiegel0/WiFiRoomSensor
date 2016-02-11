@@ -31,7 +31,8 @@ typedef enum {
 	success = 0, //< \brief The operation was finished successfully
 	err_chksum, //< \brief The received checksum was invalid
 	err_noSignal, //< \brief No signal was received.
-	err_invalidChannel //< \brief The requested channel does not exist
+	err_invalidChannel, //< \brief The requested channel does not exist
+	err_status //< \brief The status message is not ok
 } status_t;
 
 #endif /* ERROR_H_ */

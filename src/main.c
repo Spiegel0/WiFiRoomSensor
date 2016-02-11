@@ -20,33 +20,34 @@
  */
 
 #include "am2303.h"
+#include "esp8266_transceiver.h"
 
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/sfr_defs.h>
 #include <avr/interrupt.h>
 
-/** \brief The UART's baud rate */
-#define BAUD 9600
-#include <util/setbaud.h>
 
 void main_recordData(status_t status, uint16_t temperature, uint16_t humidity,
 		uint8_t channel);
+void statusCB(status_t status);
+void messageCB(status_t status, uint8_t channel,
+		uint8_t size, uint8_t rrbID);
 
 int main(void) {
 
 	DDRB |= _BV(PB1);
 
-	// Enable UART output: 8-E-2
-	UCSRA = USE_2X << U2X;
-	UCSRB = _BV(TXEN);
-	UCSRC = _BV(URSEL) | _BV(UPM1) | _BV(USBS) | _BV(UCSZ1) | _BV(UCSZ0);
-	UBRRL = UBRRL_VALUE;
-	UBRRH = UBRRH_VALUE;
-
 	am2303_init();
+	esp8266_transc_init(statusCB, messageCB);
 
 	sei();
+
+	esp8266_transc_send("AT\r\n",4);
+
+	while (1) {
+		esp8266_transc_tick();
+	}
 
 	while (1) {
 
@@ -63,6 +64,21 @@ int main(void) {
 	}
 
 	return 0;
+}
+
+void statusCB(status_t status){
+	PORTB |= _BV(PB1);
+	if(status == success){
+		_delay_ms(1000);
+	}else{
+		_delay_ms(200);
+	}
+	PORTB &= ~_BV(PB1);
+}
+
+void messageCB(status_t status, uint8_t channel,
+		uint8_t size, uint8_t rrbID){
+	// Do nothing yet
 }
 
 /**
