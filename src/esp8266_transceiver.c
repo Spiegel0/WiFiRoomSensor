@@ -123,9 +123,13 @@ const char esp8266_transc_str_ok[] PROGMEM = "OK";
 const char esp8266_transc_str_rcv[] PROGMEM = "IPD";
 
 /** \brief Adds the two operands modulo the buffer size */
-#define ESP8266_TRANSC_RRADD(a, b) (((a) + (b)) % ESP8266_TRANSC_RBUFFER_SIZE)
+#define ESP8266_TRANSC_RRADD(a, b) (((a) + (b)) % \
+		(unsigned) (ESP8266_TRANSC_RBUFFER_SIZE))
 /** \brief Subtracts the two operands modulo the buffer size */
-#define ESP8266_TRANSC_RRSUB(a, b) (((a) - (b)) % ESP8266_TRANSC_RBUFFER_SIZE)
+// The ESP8266_TRANSC_RBUFFER_SIZE literal needs to be unsigned. Otherwise the
+// mod operation will return an invalid (negative) result.
+#define ESP8266_TRANSC_RRSUB(a, b) (((a) - (b)) % \
+		(unsigned) (ESP8266_TRANSC_RBUFFER_SIZE))
 
 /* Function Declarations */
 static inline void esp8266_transc_processNextChar(void);
