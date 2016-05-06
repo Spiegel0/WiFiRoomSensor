@@ -78,7 +78,13 @@ void statusCB(status_t status){
 
 void messageCB(status_t status, uint8_t channel,
 		uint8_t size, uint8_t rrbID){
-	// Do nothing yet
+	PORTB |= _BV(PB1);
+	if(status == success){
+		_delay_ms(2000);
+	}else{
+		_delay_ms(500);
+	}
+	PORTB &= ~_BV(PB1);
 }
 
 /**
