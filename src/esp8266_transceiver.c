@@ -15,7 +15,7 @@
  *
  * \author Michael Spiegel, <michael.h.spiegel@gmail.com>
  *
- * Copyright (C) 2015 Michael Spiegel
+ * Copyright (C) 2016 Michael Spiegel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -157,6 +157,7 @@ void esp8266_transc_init(esp8266_transc_statusReceived statusCB,
 #include <util/setbaud.h>
 
 	UCSRA = USE_2X << U2X;
+	// FIXME: Why does the program crash if the receiver is enabled?
 	UCSRB = _BV(RXCIE) | _BV(RXEN) | _BV(TXEN);
 	UCSRC = _BV(URSEL) | _BV(UCSZ1) | _BV(UCSZ0);
 	UBRRL = UBRRL_VALUE;

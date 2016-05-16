@@ -12,7 +12,7 @@
  * 
  * \author Michael Spiegel, <michael.h.spiegel@gmail.com>
  *
- * Copyright (C) 2015 Michael Spiegel
+ * Copyright (C) 2016 Michael Spiegel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -54,6 +54,9 @@ typedef void (*esp8266_transc_statusReceived)(status_t status);
  */
 typedef void (*esp8266_transc_messageReceived)(status_t status, uint8_t channel,
 		uint8_t size, uint8_t rrbID);
+
+// TODO: Refactor public functions which can be called by others than the
+//       session stack
 
 /**
  * \brief Initializes the module

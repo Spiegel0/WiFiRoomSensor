@@ -3,7 +3,7 @@
  * \brief Provides the reset vector and the main loop
  * \author Michael Spiegel, <michael.h.spiegel@gmail.com>
  *
- * Copyright (C) 2015 Michael Spiegel
+ * Copyright (C) 2016 Michael Spiegel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 
 #include "am2303.h"
 #include "esp8266_transceiver.h"
+#include "esp8266_session.h"
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -39,11 +40,11 @@ int main(void) {
 	DDRB |= _BV(PB1);
 
 	am2303_init();
-	esp8266_transc_init(statusCB, messageCB);
-
+	//esp8266_transc_init(statusCB, messageCB);
+	_delay_ms(1500);
+	esp8266_session_init(messageCB);
 	sei();
 
-	esp8266_transc_send("AT\r\n",4);
 
 	while (1) {
 		esp8266_transc_tick();
