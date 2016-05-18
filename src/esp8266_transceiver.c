@@ -108,9 +108,12 @@ static uint16_t esp8266_transc_rcvSize;
 static enum {
 	IDLE = 0, ///< \brief Waits for the next character
 	ERR, ///< \brief Ignores the next chunk until \n is received
-	CR, ///< \brief Indicates that a \r was received in IDLE (-> status or +)
-	NL, ///< \brief Consumes the \n after the first \r
-	CR_STAT, ///< \brief The \r leading the a status message
+	/**
+	 * \brief Waits until a status or command is received
+	 * \details Every '\r' and '\n' character will be absorbed until a '+' sign or
+	 * the first character of the status message is received.
+	 */
+	NL,
 	STATUS_MSG, ///< \brief Read the status message
 	BGN_MSG, ///< \brief A + indicates an ESP8266 message
 	READ_CHN, ///< \brief Reads the channel number
@@ -140,7 +143,6 @@ static void esp8266_transc_decreaseBufferSync(void);
 static uint16_t esp8266_transc_rrStringToNumber(uint8_t rrStart, uint8_t rrEnd);
 static int8_t esp8266_transc_rrstrcmp_PF(uint8_t rrStart, uint8_t rrEnd,
 		const char *ref);
-static void esp8266_transc_debugState(void);
 
 void esp8266_transc_init(esp8266_transc_statusReceived statusCB,
 		esp8266_transc_messageReceived messageCB) {
@@ -250,8 +252,8 @@ static inline void esp8266_transc_processNextChar(void) {
 
 	switch (esp8266_transc_state) {
 	case IDLE: 	// ---------------------------------------------------------------
-		if (cChar == '\r') {
-			esp8266_transc_state = CR;
+		if (cChar == '\r' || cChar == '\n') {
+			esp8266_transc_state = NL;
 		} else {
 			esp8266_transc_state = ERR;
 		}
@@ -265,33 +267,17 @@ static inline void esp8266_transc_processNextChar(void) {
 		esp8266_transc_decreaseBufferSync();
 		break;
 
-	case CR: // ------------------------------------------------------------------
-		if (cChar == '\n') {
-			esp8266_transc_state = NL;
-		} else {
-			esp8266_transc_state = ERR;
-		}
-		esp8266_transc_decreaseBufferSync();
-		break;
-
 	case NL: // ------------------------------------------------------------------
-		if (cChar == '\r') {
-			esp8266_transc_state = CR_STAT;
-		} else if (cChar == '+') {
+		if (cChar == '\n' || cChar == '\r') {
+			// Consume all '\r' and '\n'
+			esp8266_transc_decreaseBufferSync();
+		}else	if (cChar == '+') {
 			esp8266_transc_state = BGN_MSG;
+			esp8266_transc_decreaseBufferSync();
 		} else {
-			esp8266_transc_state = ERR;
-		}
-		esp8266_transc_decreaseBufferSync();
-		break;
-
-	case CR_STAT: // -------------------------------------------------------------
-		if (cChar == '\n') {
+			// Keep the first byte of the status message
 			esp8266_transc_state = STATUS_MSG;
-		} else {
-			esp8266_transc_state = ERR;
 		}
-		esp8266_transc_decreaseBufferSync();
 		break;
 
 	case STATUS_MSG: 	// ---------------------------------------------------------
