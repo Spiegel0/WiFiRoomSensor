@@ -37,6 +37,9 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 
+/** \brief If the variable is defined, debug messages are suppressed */
+#define ESP8266_TRANSC_NDEBUG
+
 /**
  * \brief The size of the round robin buffer used to store received values
  * \details The size always has to be a power of two.
@@ -157,13 +160,13 @@ void esp8266_transc_init(esp8266_transc_statusReceived statusCB,
 #include <util/setbaud.h>
 
 	UCSRA = USE_2X << U2X;
-	// FIXME: Why does the program crash if the receiver is enabled?
 	UCSRB = _BV(RXCIE) | _BV(RXEN) | _BV(TXEN);
 	UCSRC = _BV(URSEL) | _BV(UCSZ1) | _BV(UCSZ0);
 	UBRRL = UBRRL_VALUE;
 	UBRRH = UBRRH_VALUE;
 }
 
+#ifndef ESP8266_TRANSC_NDEBUG
 /**
  * \brief Writes the current state to the UART
  * \details The function uses busy wait until the data is written
@@ -213,6 +216,7 @@ static void esp8266_transc_debugState(void) {
 	UCSRB = uart_state; // Reset the UART state
 	sei();
 }
+#endif
 
 void esp8266_transc_tick(void) {
 
@@ -240,8 +244,9 @@ static inline void esp8266_transc_processNextChar(void) {
 
 	uint8_t cChar = esp8266_transc_rrBuffer[esp8266_transc_rrFirstUnprocessed];
 
-	// DEBUG!!
-	esp8266_transc_debugState();
+#ifndef ESP8266_TRANSC_NDEBUG
+	esp8266_transc_debugState(); // debug the state of the module
+#endif
 
 	switch (esp8266_transc_state) {
 	case IDLE: 	// ---------------------------------------------------------------
