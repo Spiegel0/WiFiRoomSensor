@@ -509,7 +509,6 @@ ISR(USART_RXC_vect, ISR_BLOCK) {
 	uint8_t rcv = UDR;
 	uint8_t storeByte = 1;
 
-	sei();
 	// Byte is read and the interrupt source is disarmed
 
 	if (esp8266_transc_nextEcho < esp8266_transc_sendBufferSize) {
