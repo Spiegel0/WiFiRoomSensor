@@ -119,7 +119,7 @@ static enum {
 	READ_CHN, ///< \brief Reads the channel number
 	READ_LENGTH, ///< \brief Reads the message length
 	DATA_IN, ///< \brief Reads the message's data
-	READ_NL, ///< \brief The trailing newline character was read at message's end
+	READ_NL, ///< \brief Ignores any intermediate '\n' or '\r' characters
 	READ_STATUS ///< \brief The message's status is read
 } esp8266_transc_state;
 
@@ -364,11 +364,9 @@ static inline void esp8266_transc_processNextChar(void) {
 
 	case DATA_IN: // -------------------------------------------------------------
 		if (ESP8266_TRANSC_RRSUB(esp8266_transc_rrFirstUnprocessed,
-				esp8266_transc_rrFirst) > esp8266_transc_rcvSize) {
+				esp8266_transc_rrFirst) >= esp8266_transc_rcvSize) {
 			// Character after the data sequence
 			if (cChar == '\r') {
-				esp8266_transc_state = DATA_IN; // Ignore \r characters after the data
-			} else if (cChar == '\n') {
 				esp8266_transc_state = READ_NL;
 			} else {
 				esp8266_transc_state = ERR;
@@ -379,15 +377,15 @@ static inline void esp8266_transc_processNextChar(void) {
 		break;
 
 	case READ_NL: // -------------------------------------------------------------
-		if (cChar == '\r') {
-			esp8266_transc_state = READ_NL; // Ignore additional \r characters
-		}else	if (cChar == '\n') {
+		// Ignore additional \r and \n characters
+		if (cChar == '\r' || cChar == '\n') {
+			// Process the next character
+			esp8266_transc_rrFirstUnprocessed = ESP8266_TRANSC_RRADD(
+					esp8266_transc_rrFirstUnprocessed, 1);
+		}else{
 			esp8266_transc_state = READ_STATUS;
-		} else {
-			esp8266_transc_state = ERR;
+			// Do not consume the current character
 		}
-		esp8266_transc_rrFirstUnprocessed = ESP8266_TRANSC_RRADD(
-				esp8266_transc_rrFirstUnprocessed, 1);
 		break;
 
 	case READ_STATUS: // ---------------------------------------------------------

@@ -41,7 +41,7 @@ int main(void) {
 
 	am2303_init();
 	//esp8266_transc_init(statusCB, messageCB);
-	_delay_ms(1500);
+	_delay_ms(1000);
 	esp8266_session_init(messageCB);
 	sei();
 
