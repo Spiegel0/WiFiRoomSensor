@@ -35,7 +35,7 @@
 #endif
 
 /** \brief Structure which encapsulates the data of the module */
-volatile struct {
+volatile static struct {
 	/** \brief A flag which indicates that the timer has been triggered before */
 	int8_t fired :1;
 	/** \brief An internal counter which further divides the timer frequency */

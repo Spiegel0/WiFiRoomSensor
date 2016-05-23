@@ -79,8 +79,8 @@ NW_CONFIG_SRV_PORT;
 const char esp8266_session_cmdReset[] PROGMEM = "AT+RST";
 
 // Function definition
-void esp8266_session_statusReceived(status_t status);
-void esp8266_session_sendCommand_P(const char *command_P);
+static void esp8266_session_statusReceived(status_t status);
+static void esp8266_session_sendCommand_P(const char *command_P);
 static void esp8266_session_handleInitError(void);
 
 void esp8266_session_init(esp8266_transc_messageReceived messageCB) {
@@ -100,7 +100,7 @@ void esp8266_session_init(esp8266_transc_messageReceived messageCB) {
  * initialization and any sending operations.
  * \param status The status which is returned from the ESP8266
  */
-void esp8266_session_statusReceived(status_t status) {
+static void esp8266_session_statusReceived(status_t status) {
 
 	switch (esp8266_session_state) {
 	case INIT_SETMUX: // ---------------------------------------------------------
@@ -183,7 +183,7 @@ void esp8266_session_timedTick(void) {
  * that the command doesn't include the terminating charge return and newline
  * characters.
  */
-void esp8266_session_sendCommand_P(const char *command_P) {
+static void esp8266_session_sendCommand_P(const char *command_P) {
 	uint8_t length;
 	(void) strcpy_P((char*) esp8266_session_buffer, command_P);
 	length = strlen((char*) esp8266_session_buffer);
