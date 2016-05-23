@@ -22,32 +22,32 @@
 #include "am2303.h"
 #include "esp8266_transceiver.h"
 #include "esp8266_session.h"
+#include "system_timer.h"
 
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/sfr_defs.h>
 #include <avr/interrupt.h>
 
-
 void main_recordData(status_t status, uint16_t temperature, uint16_t humidity,
 		uint8_t channel);
 void statusCB(status_t status);
-void messageCB(status_t status, uint8_t channel,
-		uint8_t size, uint8_t rrbID);
+void messageCB(status_t status, uint8_t channel, uint8_t size, uint8_t rrbID);
 
 int main(void) {
 
 	DDRB |= _BV(PB1);
 
+	system_timer_init();
 	am2303_init();
-	//esp8266_transc_init(statusCB, messageCB);
-	_delay_ms(1000);
 	esp8266_session_init(messageCB);
 	sei();
 
-
 	while (1) {
 		esp8266_transc_tick();
+		if (system_timer_query()) {
+			esp8266_session_timedTick();
+		}
 	}
 
 	while (1) {
@@ -67,22 +67,21 @@ int main(void) {
 	return 0;
 }
 
-void statusCB(status_t status){
+void statusCB(status_t status) {
 	PORTB |= _BV(PB1);
-	if(status == success){
+	if (status == success) {
 		_delay_ms(1000);
-	}else{
+	} else {
 		_delay_ms(200);
 	}
 	PORTB &= ~_BV(PB1);
 }
 
-void messageCB(status_t status, uint8_t channel,
-		uint8_t size, uint8_t rrbID){
+void messageCB(status_t status, uint8_t channel, uint8_t size, uint8_t rrbID) {
 	PORTB |= _BV(PB1);
-	if(status == success){
+	if (status == success) {
 		_delay_ms(2000);
-	}else{
+	} else {
 		_delay_ms(500);
 	}
 	PORTB &= ~_BV(PB1);

@@ -49,6 +49,9 @@ typedef void (*esp8266_session_sendComplete)(status_t status);
  * callback is provided which indicates that the initialization function has
  * finished. The initialization function must be called exactly once before
  * using any other function of the module. </p>
+ * <p>If the ESP8266 can't be properly configured, the module enters a
+ * long-retry mode which will wait for a certain amount of time until the
+ * initialization procedure is started anew.</p>
  * <p> Currently, it is assumed that the ESP8266 was properly configured in
  * station mode connecting to a given network. The network parameters will not
  * be set again. </p>
@@ -77,5 +80,13 @@ void esp8266_session_init(esp8266_transc_messageReceived messageCB);
  */
 status_t esp8266_session_send(uint8_t channel, uint8_t *buffer, uint8_t size,
 		esp8266_session_sendComplete sendCompleteCB);
+
+/**
+ * \brief Manages timeouts and waiting
+ * \details The function has to be called periodically from a non-interrupt
+ * context. It is expected that is is called whenever the system timer expires.
+ * Hence, a period of approximately SYSTEM_TIMER_PERIOD_MS is assumed.
+ */
+void esp8266_session_timedTick(void);
 
 #endif /* ESP8266_SESSION_H_ */

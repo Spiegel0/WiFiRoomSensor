@@ -28,6 +28,7 @@
 
 #include "network-config.h"
 #include "esp8266_transceiver.h"
+#include "system_timer.h"
 #include <avr/pgmspace.h>
 #include <stdint.h>
 #include <string.h>
@@ -46,9 +47,16 @@ static uint8_t esp8266_session_buffer[ESP8266_SESSION_BUFFER_SIZE];
  */
 static enum {
 	IDLE = 0, ///< \brief No operation is performed
+	INIT_WAIT, ///< \brief Waits until the chip has initialized itself
 	INIT_SETMUX, ///< \brief Sets the multiplexing setting (multiple connections)
 	INIT_OPENSRV ///< \brief Opens the TCP/IP Server
 } esp8266_session_state;
+
+/**
+ * \brief The number of remaining timedTicks until the next operation is
+ * scheduled
+ */
+static uint16_t esp8266_session_remainingTicks;
 
 // The whole bunch of command strings
 /**
@@ -58,21 +66,19 @@ static enum {
 const char esp8266_session_cmdMux[] PROGMEM = "AT+CIPMUX=1";
 /** \brief Command which opens a server */
 const char esp8266_session_cmdOpenSrv[] PROGMEM = "AT+CIPSERVER=1,"
-		NW_CONFIG_SRV_PORT;
+NW_CONFIG_SRV_PORT;
 
 // Function definition
 void esp8266_session_statusReceived(status_t status);
 void esp8266_session_sendCommand_P(const char *command_P);
 
-// TODO: Check if ESP8266 has been configured before and set operation mode and
-//       Network settings
 void esp8266_session_init(esp8266_transc_messageReceived messageCB) {
 	// Initialize the transceiver
 	esp8266_transc_init(esp8266_session_statusReceived, messageCB);
 
-	// Send the first command
-	esp8266_session_state = INIT_SETMUX;
-	esp8266_session_sendCommand_P(esp8266_session_cmdMux);
+	// Wait until the chip has been initialized
+	esp8266_session_remainingTicks = SYSTEM_TIMER_MS_TO_TICKS(1000);
+	esp8266_session_state = INIT_WAIT;
 
 }
 
@@ -87,18 +93,46 @@ void esp8266_session_statusReceived(status_t status) {
 	// TODO: Check status
 
 	switch (esp8266_session_state) {
-	case IDLE:
-		break; // There shouldn't be a reply
-	case INIT_SETMUX:
+	case INIT_SETMUX: // ---------------------------------------------------------
 		esp8266_session_state = INIT_OPENSRV;
 		esp8266_session_sendCommand_P(esp8266_session_cmdOpenSrv);
 		break;
-	case INIT_OPENSRV:
+
+	case INIT_OPENSRV: // --------------------------------------------------------
 		esp8266_session_state = IDLE;
+		break;
+
+	default: // ------------------------------------------------------------------
 		break;
 	}
 
 	// TODO: Implement
+}
+
+/**
+ * \brief Maintains the wait timer and starts appropriate actions
+ * \details The timed part of the state machine is implemented here.
+ */
+// TODO: Check if ESP8266 has been configured before and set operation mode and
+//       Network settings
+void esp8266_session_timedTick(void) {
+
+	if (esp8266_session_remainingTicks > 0) {
+		esp8266_session_remainingTicks--;
+	} else {
+
+		switch (esp8266_session_state) {
+		case INIT_WAIT: // ---------------------------------------------------------
+			esp8266_session_state = INIT_SETMUX;
+			esp8266_session_sendCommand_P(esp8266_session_cmdMux);
+			break;
+
+		default: // ----------------------------------------------------------------
+			break;
+		}
+
+	}
+
 }
 
 /**
