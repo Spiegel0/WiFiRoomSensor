@@ -49,7 +49,12 @@ static enum {
 	IDLE = 0, ///< \brief No operation is performed
 	INIT_WAIT, ///< \brief Waits until the chip has initialized itself
 	INIT_SETMUX, ///< \brief Sets the multiplexing setting (multiple connections)
-	INIT_OPENSRV ///< \brief Opens the TCP/IP Server
+	INIT_OPENSRV, ///< \brief Opens the TCP/IP Server
+	/**
+	 * \brief Waits until the initialization procedure is started again
+	 * \details Before starting the initialization procedure the chip is reset.
+	 */
+	INIT_LONG_RETRY
 } esp8266_session_state;
 
 /**
@@ -57,6 +62,9 @@ static enum {
  * scheduled
  */
 static uint16_t esp8266_session_remainingTicks;
+
+/** \brief The number of retries which are performed before giving up. */
+static uint8_t esp8266_session_retryCnt;
 
 // The whole bunch of command strings
 /**
@@ -67,10 +75,13 @@ const char esp8266_session_cmdMux[] PROGMEM = "AT+CIPMUX=1";
 /** \brief Command which opens a server */
 const char esp8266_session_cmdOpenSrv[] PROGMEM = "AT+CIPSERVER=1,"
 NW_CONFIG_SRV_PORT;
+/** \brief command which resets the chip */
+const char esp8266_session_cmdReset[] PROGMEM = "AT+RST";
 
 // Function definition
 void esp8266_session_statusReceived(status_t status);
 void esp8266_session_sendCommand_P(const char *command_P);
+static void esp8266_session_handleInitError(void);
 
 void esp8266_session_init(esp8266_transc_messageReceived messageCB) {
 	// Initialize the transceiver
@@ -79,6 +90,7 @@ void esp8266_session_init(esp8266_transc_messageReceived messageCB) {
 	// Wait until the chip has been initialized
 	esp8266_session_remainingTicks = SYSTEM_TIMER_MS_TO_TICKS(1000);
 	esp8266_session_state = INIT_WAIT;
+	esp8266_session_retryCnt = 3;
 
 }
 
@@ -90,23 +102,46 @@ void esp8266_session_init(esp8266_transc_messageReceived messageCB) {
  */
 void esp8266_session_statusReceived(status_t status) {
 
-	// TODO: Check status
-
 	switch (esp8266_session_state) {
 	case INIT_SETMUX: // ---------------------------------------------------------
-		esp8266_session_state = INIT_OPENSRV;
-		esp8266_session_sendCommand_P(esp8266_session_cmdOpenSrv);
+		if (status == success) {
+			esp8266_session_state = INIT_OPENSRV;
+			esp8266_session_sendCommand_P(esp8266_session_cmdOpenSrv);
+		} else {
+			esp8266_session_handleInitError();
+		}
 		break;
 
 	case INIT_OPENSRV: // --------------------------------------------------------
-		esp8266_session_state = IDLE;
+		if (status == success) {
+			esp8266_session_state = IDLE;
+		} else {
+			esp8266_session_handleInitError();
+		}
 		break;
 
 	default: // ------------------------------------------------------------------
 		break;
 	}
 
-	// TODO: Implement
+}
+
+/**
+ * \brief handles an error during initialization of the esp8266
+ * \details It checks the retry counter and starts the procedure anew. If no
+ * retries are left, the long retry mode is entered.
+ */
+static void esp8266_session_handleInitError(void) {
+	if (esp8266_session_retryCnt > 0) {
+		esp8266_session_state = INIT_WAIT;
+		esp8266_session_retryCnt--;
+		esp8266_session_remainingTicks = SYSTEM_TIMER_MS_TO_TICKS(1500UL);
+	} else {
+		esp8266_session_state = INIT_LONG_RETRY;
+		esp8266_session_retryCnt = 1;
+		esp8266_session_remainingTicks = SYSTEM_TIMER_MS_TO_TICKS(180000UL);
+	}
+	esp8266_session_sendCommand_P(esp8266_session_cmdReset);
 }
 
 /**
@@ -123,6 +158,7 @@ void esp8266_session_timedTick(void) {
 
 		switch (esp8266_session_state) {
 		case INIT_WAIT: // ---------------------------------------------------------
+		case INIT_LONG_RETRY:
 			esp8266_session_state = INIT_SETMUX;
 			esp8266_session_sendCommand_P(esp8266_session_cmdMux);
 			break;
