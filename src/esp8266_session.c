@@ -32,6 +32,7 @@
 #include <avr/pgmspace.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 
 /** \brief The length of the internal message buffer in bytes */
 #define ESP8266_SESSION_BUFFER_SIZE (128)
@@ -54,7 +55,8 @@ static enum {
 	 * \brief Waits until the initialization procedure is started again
 	 * \details Before starting the initialization procedure the chip is reset.
 	 */
-	INIT_LONG_RETRY
+	INIT_LONG_RETRY,
+	SEND_DATA ///< \brief A sending operation is currently in progress
 } esp8266_session_state;
 
 /**
@@ -66,6 +68,9 @@ static uint16_t esp8266_session_remainingTicks;
 /** \brief The number of retries which are performed before giving up. */
 static uint8_t esp8266_session_retryCnt;
 
+/** \brief Variable which holds the send complete callback pointer */
+static esp8266_session_sendComplete_t esp8266_session_sendCompleteCB;
+
 // The whole bunch of command strings
 /**
  * \brief Command which sets the chip multiplexing mode
@@ -75,8 +80,12 @@ const char esp8266_session_cmdMux[] PROGMEM = "AT+CIPMUX=1";
 /** \brief Command which opens a server */
 const char esp8266_session_cmdOpenSrv[] PROGMEM = "AT+CIPSERVER=1,"
 NW_CONFIG_SRV_PORT;
-/** \brief command which resets the chip */
+/** \brief Command which resets the chip */
 const char esp8266_session_cmdReset[] PROGMEM = "AT+RST";
+/** \brief command which initiates sending a byte sequence */
+const char esp8266_session_cmdSend[] PROGMEM = "AT+CIPSEND=";
+/** \brief The number of bytes of the send command */
+#define ESP8266_SESSION_CMD_SEND_LENGTH (11)
 
 // Function definition
 static void esp8266_session_statusReceived(status_t status);
@@ -92,6 +101,40 @@ void esp8266_session_init(esp8266_transc_messageReceived messageCB) {
 	esp8266_session_state = INIT_WAIT;
 	esp8266_session_retryCnt = 3;
 
+}
+
+status_t esp8266_session_send(uint8_t channel, uint8_t *buffer, uint8_t size,
+		esp8266_session_sendComplete_t sendCompleteCB) {
+	uint8_t nextIndex;
+
+	if (channel > 3)
+		return err_invalidChannel;
+	if (size
+			> (ESP8266_SESSION_BUFFER_SIZE - ESP8266_SESSION_CMD_SEND_LENGTH - 10))
+		return err_sizeOutOfBounds;
+	if (esp8266_session_state != IDLE)
+		return err_invalidState;
+
+	(void) strcpy_P((char*) esp8266_session_buffer, esp8266_session_cmdSend);
+	nextIndex = ESP8266_SESSION_CMD_SEND_LENGTH;
+	esp8266_session_buffer[nextIndex++] = ('0' + channel);
+	esp8266_session_buffer[nextIndex++] = ',';
+
+	(void) utoa(size, (char*) &esp8266_session_buffer[nextIndex], 10);
+	nextIndex += strlen((char*) &esp8266_session_buffer[nextIndex]);
+
+	esp8266_session_buffer[nextIndex++] = '\r';
+	esp8266_session_buffer[nextIndex++] = '\n';
+
+	(void) memcpy(&esp8266_session_buffer[nextIndex], buffer, size);
+	nextIndex += size;
+
+	esp8266_session_sendCompleteCB = sendCompleteCB;
+	esp8266_session_state = SEND_DATA;
+
+	esp8266_transc_send(esp8266_session_buffer, nextIndex);
+
+	return success;
 }
 
 /**
@@ -118,6 +161,11 @@ static void esp8266_session_statusReceived(status_t status) {
 		} else {
 			esp8266_session_handleInitError();
 		}
+		break;
+
+	case SEND_DATA: // -----------------------------------------------------------
+		esp8266_session_sendCompleteCB(status);
+		esp8266_session_state = IDLE;
 		break;
 
 	default: // ------------------------------------------------------------------

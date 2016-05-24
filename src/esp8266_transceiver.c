@@ -39,7 +39,6 @@
 
 /** \brief If the variable is defined, debug messages are suppressed */
 #define ESP8266_TRANSC_NDEBUG
-
 /**
  * \brief The size of the round robin buffer used to store received values
  * \details The size always has to be a power of two.
@@ -120,11 +119,14 @@ static enum {
 	READ_LENGTH, ///< \brief Reads the message length
 	DATA_IN, ///< \brief Reads the message's data
 	READ_NL, ///< \brief Ignores any intermediate '\n' or '\r' characters
-	READ_STATUS ///< \brief The message's status is read
+	READ_STATUS, ///< \brief The message's status is read
+	CMD_PROMPT, ///< \brief A command prompt was transmitted (used to ignore it)
 } esp8266_transc_state;
 
 /** \brief the status ok string */
 const char esp8266_transc_str_ok[] PROGMEM = "OK";
+/** \brief the status send ok string */
+const char esp8266_transc_str_sendOk[] PROGMEM = "SEND OK";
 /** \brief the received packet message identifier */
 const char esp8266_transc_str_rcv[] PROGMEM = "IPD";
 
@@ -271,8 +273,11 @@ static inline void esp8266_transc_processNextChar(void) {
 		if (cChar == '\n' || cChar == '\r') {
 			// Consume all '\r' and '\n'
 			esp8266_transc_decreaseBufferSync();
-		}else	if (cChar == '+') {
+		} else if (cChar == '+') {
 			esp8266_transc_state = BGN_MSG;
+			esp8266_transc_decreaseBufferSync();
+		} else if (cChar == '>') {
+			esp8266_transc_state = CMD_PROMPT;
 			esp8266_transc_decreaseBufferSync();
 		} else {
 			// Keep the first byte of the status message
@@ -286,6 +291,9 @@ static inline void esp8266_transc_processNextChar(void) {
 			// Evaluate status message
 			if (esp8266_transc_rrstrcmp_PF(esp8266_transc_rrFirst,
 					esp8266_transc_rrFirstUnprocessed, esp8266_transc_str_ok) == 0) {
+				status = success;
+			} else if (esp8266_transc_rrstrcmp_PF(esp8266_transc_rrFirst,
+					esp8266_transc_rrFirstUnprocessed, esp8266_transc_str_sendOk) == 0) {
 				status = success;
 			}
 
@@ -382,7 +390,7 @@ static inline void esp8266_transc_processNextChar(void) {
 			// Process the next character
 			esp8266_transc_rrFirstUnprocessed = ESP8266_TRANSC_RRADD(
 					esp8266_transc_rrFirstUnprocessed, 1);
-		}else{
+		} else {
 			esp8266_transc_state = READ_STATUS;
 			// Do not consume the current character
 		}
@@ -393,8 +401,8 @@ static inline void esp8266_transc_processNextChar(void) {
 			status_t status = err_status;
 			// Evaluate status message
 			if (esp8266_transc_rrstrcmp_PF(
-						ESP8266_TRANSC_RRSUB(esp8266_transc_rrFirstUnprocessed,2),
-						esp8266_transc_rrFirstUnprocessed, esp8266_transc_str_ok) == 0) {
+					ESP8266_TRANSC_RRSUB(esp8266_transc_rrFirstUnprocessed, 2),
+					esp8266_transc_rrFirstUnprocessed, esp8266_transc_str_ok) == 0) {
 				status = success;
 			}
 
@@ -409,6 +417,11 @@ static inline void esp8266_transc_processNextChar(void) {
 		}
 		break;
 
+	case CMD_PROMPT: // ----------------------------------------------------------
+		// Ignore the prompt sequence ("> ")
+		esp8266_transc_state = IDLE;
+		esp8266_transc_decreaseBufferSync();
+		break;
 	}
 }
 

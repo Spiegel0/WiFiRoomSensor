@@ -38,7 +38,7 @@
  * \brief Indicates that the send operation was completed
  * \param status The status of the previously initiated send operation.
  */
-typedef void (*esp8266_session_sendComplete)(status_t status);
+typedef void (*esp8266_session_sendComplete_t)(status_t status);
 
 /**
  * \brief Initializes the ESP8266
@@ -79,7 +79,7 @@ void esp8266_session_init(esp8266_transc_messageReceived messageCB);
  * \return success if the operation is started successfully.
  */
 status_t esp8266_session_send(uint8_t channel, uint8_t *buffer, uint8_t size,
-		esp8266_session_sendComplete sendCompleteCB);
+		esp8266_session_sendComplete_t sendCompleteCB);
 
 /**
  * \brief Manages timeouts and waiting

@@ -78,6 +78,7 @@ void statusCB(status_t status) {
 }
 
 void messageCB(status_t status, uint8_t channel, uint8_t size, uint8_t rrbID) {
+
 	PORTB |= _BV(PB1);
 	if (status == success) {
 		_delay_ms(2000);
@@ -85,6 +86,9 @@ void messageCB(status_t status, uint8_t channel, uint8_t size, uint8_t rrbID) {
 		_delay_ms(500);
 	}
 	PORTB &= ~_BV(PB1);
+	_delay_ms(500);
+
+	status = esp8266_session_send(channel, (uint8_t*) "1234567", 7, &statusCB);
 }
 
 /**
