@@ -77,18 +77,18 @@ void statusCB(status_t status) {
 	PORTB &= ~_BV(PB1);
 }
 
+// FIXME: Line break in data content is transmitted at the beginning instead of the end.
+// FIXME: A single line break lets the implementation fail
 void messageCB(status_t status, uint8_t channel, uint8_t size, uint8_t rrbID) {
 
-	PORTB |= _BV(PB1);
-	if (status == success) {
-		_delay_ms(2000);
-	} else {
-		_delay_ms(500);
-	}
-	PORTB &= ~_BV(PB1);
-	_delay_ms(500);
+	uint8_t i;
+	static uint8_t buffer[100];
+	if(size > 100) return;
 
-	status = esp8266_session_send(channel, (uint8_t*) "1234567", 7, &statusCB);
+	for(i = 0; i < size; i++)
+		buffer[i] = esp8266_receiver_getByte(rrbID, i);
+
+	status = esp8266_session_send(channel, buffer, size, &statusCB);
 }
 
 /**

@@ -69,7 +69,7 @@ static esp8266_transc_messageReceived esp8266_transc_messageCB;
  * \details The buffer may also be accessed in an interrupt context. The
  * accessed regions are determined by the index pointers and will not overlap.
  */
-static uint8_t esp8266_transc_rrBuffer[ESP8266_TRANSC_RBUFFER_SIZE];
+static volatile uint8_t esp8266_transc_rrBuffer[ESP8266_TRANSC_RBUFFER_SIZE];
 /**
  * \brief The index of the first valid byte
  * \details The variable may be read in an interrupt context. It is increased if
@@ -429,6 +429,10 @@ static inline void esp8266_transc_processNextChar(void) {
 		esp8266_transc_decreaseBufferSync();
 		break;
 	}
+}
+
+uint8_t esp8266_receiver_getByte(uint8_t rrbID, uint8_t offset) {
+	return esp8266_transc_rrBuffer[ESP8266_TRANSC_RRADD(rrbID, offset)];
 }
 
 /**

@@ -31,7 +31,7 @@
 #define ESP8266_TRANSCEIVER_H_
 
 #include "error.h"
-
+#include "esp8266_receiver.h"
 #include <stdint.h>
 
 /**
@@ -39,24 +39,6 @@
  * \param status The received and decoded status
  */
 typedef void (*esp8266_transc_statusReceived)(status_t status);
-
-/**
- * \brief Callback pointer which points to a message processing function.
- * \details The function is executed if a message was received.
- * \param status The status of the message
- * \param channel The message's channel number. The value ranges from zero to
- * three.
- * \param size The number of data bytes which were received
- * \param rrbID An index to the message's first byte in the round robin buffer.
- * It is advised to use protected access mechanisms only. The message may not
- * be organized in a consecutive memory block. I.e. the memory may eventually
- * wrap.
- */
-typedef void (*esp8266_transc_messageReceived)(status_t status, uint8_t channel,
-		uint8_t size, uint8_t rrbID);
-
-// TODO: Refactor public functions which can be called by others than the
-//       session stack
 
 /**
  * \brief Initializes the module
