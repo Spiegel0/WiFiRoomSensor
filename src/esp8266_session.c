@@ -30,6 +30,7 @@
 #include "esp8266_transceiver.h"
 #include "system_timer.h"
 #include <avr/pgmspace.h>
+#include <avr/eeprom.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
@@ -56,6 +57,8 @@ static enum {
 	 * \details Before starting the initialization procedure the chip is reset.
 	 */
 	INIT_LONG_RETRY,
+	INIT_MODE, ///< \brief Sets the wifi mode (AP, station, ...)
+	INIT_NETWORK, ///< \brief Configures the wireless network
 	SEND_DATA ///< \brief A sending operation is currently in progress
 } esp8266_session_state;
 
@@ -70,6 +73,9 @@ static uint8_t esp8266_session_retryCnt;
 
 /** \brief Variable which holds the send complete callback pointer */
 static esp8266_session_sendComplete_t esp8266_session_sendCompleteCB;
+
+/** \brief Persistent flag which indicates whether the chip is configured */
+uint8_t esp8266_session_chipConfigured EEMEM = 0;
 
 // The whole bunch of command strings
 /**
@@ -86,6 +92,11 @@ const char esp8266_session_cmdReset[] PROGMEM = "AT+RST";
 const char esp8266_session_cmdSend[] PROGMEM = "AT+CIPSEND=";
 /** \brief The number of bytes of the send command */
 #define ESP8266_SESSION_CMD_SEND_LENGTH (11)
+/** \brief Command which sets the chip to station mode */
+const char esp8266_session_cmdMode[] PROGMEM = "AT+CWMODE=1";
+/** \brief Command which changes the wireless network settings  */
+const char esp8266_session_cmdNetwork[] PROGMEM = "AT+CWJAP=\""
+NW_CONFIG_NETWORK "\",\"" NW_CONFIG_PWD "\"";
 
 // Function definition
 static void esp8266_session_statusReceived(status_t status);
@@ -147,7 +158,7 @@ static void esp8266_session_statusReceived(status_t status) {
 
 	switch (esp8266_session_state) {
 	case INIT_SETMUX: // ---------------------------------------------------------
-		if (status == success) {
+		if (status == success || status == err_noChange) {
 			esp8266_session_state = INIT_OPENSRV;
 			esp8266_session_sendCommand_P(esp8266_session_cmdOpenSrv);
 		} else {
@@ -156,8 +167,28 @@ static void esp8266_session_statusReceived(status_t status) {
 		break;
 
 	case INIT_OPENSRV: // --------------------------------------------------------
-		if (status == success) {
+		if (status == success || status == err_noChange) {
 			esp8266_session_state = IDLE;
+		} else {
+			esp8266_session_handleInitError();
+		}
+		break;
+
+	case INIT_MODE: // -----------------------------------------------------------
+		if (status == success || status == err_noChange) {
+			esp8266_session_state = INIT_NETWORK;
+			esp8266_session_sendCommand_P(esp8266_session_cmdNetwork);
+		} else {
+			esp8266_session_handleInitError();
+		}
+		break;
+
+	case INIT_NETWORK: // --------------------------------------------------------
+		if (status == success || status == err_noChange) {
+			eeprom_update_byte(&esp8266_session_chipConfigured, 1);
+			esp8266_session_state = INIT_WAIT;
+			esp8266_session_remainingTicks = SYSTEM_TIMER_MS_TO_TICKS(1500UL);
+			esp8266_session_sendCommand_P(esp8266_session_cmdReset);
 		} else {
 			esp8266_session_handleInitError();
 		}
@@ -196,8 +227,6 @@ static void esp8266_session_handleInitError(void) {
  * \brief Maintains the wait timer and starts appropriate actions
  * \details The timed part of the state machine is implemented here.
  */
-// TODO: Check if ESP8266 has been configured before and set operation mode and
-//       Network settings
 void esp8266_session_timedTick(void) {
 
 	if (esp8266_session_remainingTicks > 0) {
@@ -207,8 +236,15 @@ void esp8266_session_timedTick(void) {
 		switch (esp8266_session_state) {
 		case INIT_WAIT: // ---------------------------------------------------------
 		case INIT_LONG_RETRY:
-			esp8266_session_state = INIT_SETMUX;
-			esp8266_session_sendCommand_P(esp8266_session_cmdMux);
+			if (eeprom_read_byte(&esp8266_session_chipConfigured)) {
+				// Short initialization
+				esp8266_session_state = INIT_SETMUX;
+				esp8266_session_sendCommand_P(esp8266_session_cmdMux);
+			} else {
+				// Set all available parameters
+				esp8266_session_state = INIT_MODE;
+				esp8266_session_sendCommand_P(esp8266_session_cmdMode);
+			}
 			break;
 
 		default: // ----------------------------------------------------------------

@@ -52,9 +52,9 @@ typedef void (*esp8266_session_sendComplete_t)(status_t status);
  * <p>If the ESP8266 can't be properly configured, the module enters a
  * long-retry mode which will wait for a certain amount of time until the
  * initialization procedure is started anew.</p>
- * <p> Currently, it is assumed that the ESP8266 was properly configured in
- * station mode connecting to a given network. The network parameters will not
- * be set again. </p>
+ * <p> On first booting the chip, non-volatile network parameters will be set.
+ * The EEPROM is used to store a flag which indicates whether the ESP8266 has
+ * been programmed.</p>
  * \param messageCB The transceiver callback function which indicates a received
  * message. It will be directly passed to \ref esp8266_transc_init.
  */

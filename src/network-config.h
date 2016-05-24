@@ -26,4 +26,14 @@
 /** \brief The port number of the opened server */
 #define NW_CONFIG_SRV_PORT "61499"
 
+/** \brief The destination network name */
+#define NW_CONFIG_NETWORK "Elysion"
+
+/**
+ * \brief The network password
+ */
+#ifndef NW_CONFIG_PWD
+	#include "pwd.txt"
+#endif
+
 #endif /* NETWORK_CONFIG_H_ */

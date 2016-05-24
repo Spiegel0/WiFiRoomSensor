@@ -127,6 +127,8 @@ static enum {
 const char esp8266_transc_str_ok[] PROGMEM = "OK";
 /** \brief the status send ok string */
 const char esp8266_transc_str_sendOk[] PROGMEM = "SEND OK";
+/** \brief status code which indicates no change */
+const char esp8266_transc_str_noChange[] PROGMEM = "no change";
 /** \brief the received packet message identifier */
 const char esp8266_transc_str_rcv[] PROGMEM = "IPD";
 
@@ -184,40 +186,40 @@ static void esp8266_transc_debugState(void) {
 	sei();
 
 	while (!(UCSRA & _BV(UDRE)))
-		; // Wait
-	UDR = 0xAA; // magic number
+	;// Wait
+	UDR = 0xAA;// magic number
 	while (!(UCSRA & _BV(UDRE)))
-		; // Wait
+	;// Wait
 	UDR = (uint8_t) esp8266_transc_state;
 	while (!(UCSRA & _BV(UDRE)))
-		; // Wait
+	;// Wait
 	UDR = (uint8_t) esp8266_transc_rrAllocation;
 	while (!(UCSRA & _BV(UDRE)))
-		; // Wait
+	;// Wait
 	UDR = (uint8_t) esp8266_transc_rrFirst;
 	while (!(UCSRA & _BV(UDRE)))
-		; // Wait
+	;// Wait
 	UDR = (uint8_t) esp8266_transc_rrFirstUnprocessed;
 	while (!(UCSRA & _BV(UDRE)))
-		; // Wait
+	;// Wait
 	UDR = (uint8_t) esp8266_transc_nextEcho;
 	while (!(UCSRA & _BV(UDRE)))
-		; // Wait
+	;// Wait
 	UDR = (uint8_t) esp8266_transc_rrBuffer[esp8266_transc_rrFirstUnprocessed];
 	while (!(UCSRA & _BV(UDRE)))
-		; // Wait
+	;// Wait
 	UDR = (uint8_t) esp8266_transc_rcvChannelID;
 	while (!(UCSRA & _BV(UDRE)))
-		; // Wait
+	;// Wait
 	UDR = (uint8_t) esp8266_transc_rcvSize;
 	while (!(UCSRA & _BV(UDRE)))
-		; // Wait
-	UDR = 0x55; // magic number
+	;// Wait
+	UDR = 0x55;// magic number
 	while (!(UCSRA & _BV(UDRE)))
-		; // Wait
+	;// Wait
 
 	cli();
-	UCSRB = uart_state; // Reset the UART state
+	UCSRB = uart_state;// Reset the UART state
 	sei();
 }
 #endif
@@ -295,6 +297,10 @@ static inline void esp8266_transc_processNextChar(void) {
 			} else if (esp8266_transc_rrstrcmp_PF(esp8266_transc_rrFirst,
 					esp8266_transc_rrFirstUnprocessed, esp8266_transc_str_sendOk) == 0) {
 				status = success;
+			} else if (esp8266_transc_rrstrcmp_PF(esp8266_transc_rrFirst,
+					esp8266_transc_rrFirstUnprocessed, esp8266_transc_str_noChange)
+					== 0) {
+				status = err_noChange;
 			}
 
 			// Notify via callback

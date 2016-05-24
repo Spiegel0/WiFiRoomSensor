@@ -29,6 +29,7 @@
  */
 typedef enum {
 	success = 0, //< \brief The operation was finished successfully
+	err_noChange = 0, //< \brief Indicates that the operation changes nothing
 	err_chksum, //< \brief The received checksum was invalid
 	err_noSignal, //< \brief No signal was received.
 	err_invalidChannel, //< \brief The requested channel does not exist
