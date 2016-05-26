@@ -138,7 +138,9 @@ status_t esp8266_session_send(uint8_t channel, uint8_t *buffer, uint8_t size,
 	nextIndex += strlen((char*) &esp8266_session_buffer[nextIndex]);
 
 	esp8266_session_buffer[nextIndex++] = '\r';
-	esp8266_session_buffer[nextIndex++] = '\n';
+	// My ESP8266 firmware version 00160901 (via AT+GMR) requires only a '\r' to
+	// be sent after the command. Every '\n' would be considered as part of the
+	// message.
 
 	esp8266_session_sendCompleteCB = sendCompleteCB;
 	esp8266_session_sendBufferReference = buffer;
@@ -207,7 +209,7 @@ static void esp8266_session_statusReceived(status_t status) {
 			esp8266_session_state = IDLE;
 		}
 		break;
-
+		// TODO: Set timeout in send data state -> ESP may not send a status code
 	case SEND_DATA: // -----------------------------------------------------------
 		esp8266_session_sendCompleteCB(status);
 		esp8266_session_state = IDLE;
