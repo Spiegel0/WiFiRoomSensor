@@ -70,8 +70,10 @@ void esp8266_transc_tick(void);
  * simultaneously.
  * \param buffer The memory region of the packet to transmit. It has to contain
  * at least size bytes.
- * \param size The number of bytes to transmit. It has to be greater or equal
- * than one.
+ * \param size The number of bytes to transmit. If the size is zero, nothing
+ * will be sent and the previous buffer reference is removed. Be aware that
+ * removing the buffer before every byte is echoed may cause spurious commands
+ * from the ESP8266 to the controller.
  */
 void esp8266_transc_send(uint8_t *buffer, uint8_t size);
 

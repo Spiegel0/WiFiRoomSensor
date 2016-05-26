@@ -36,7 +36,8 @@ typedef enum {
 	err_invalidChannel, //< \brief The requested channel does not exist
 	err_status, //< \brief The status message is not ok
 	err_sizeOutOfBounds, //< \brief Indicates that the given size is out of range
-	err_invalidState //< \brief Indicates an invalid state
+	err_invalidState, //< \brief Indicates an invalid state
+	err_timeout //< \brief A timeout has occurred
 } status_t;
 
 #endif /* ERROR_H_ */

@@ -146,6 +146,7 @@ status_t esp8266_session_send(uint8_t channel, uint8_t *buffer, uint8_t size,
 	esp8266_session_sendBufferReference = buffer;
 	esp8266_session_sendBufferSize = size;
 
+	esp8266_session_remainingTicks = SYSTEM_TIMER_MS_TO_TICKS(500);
 	esp8266_session_state = SEND_INITIATED;
 
 	esp8266_transc_send(esp8266_session_buffer, nextIndex);
@@ -209,7 +210,7 @@ static void esp8266_session_statusReceived(status_t status) {
 			esp8266_session_state = IDLE;
 		}
 		break;
-		// TODO: Set timeout in send data state -> ESP may not send a status code
+
 	case SEND_DATA: // -----------------------------------------------------------
 		esp8266_session_sendCompleteCB(status);
 		esp8266_session_state = IDLE;
@@ -261,6 +262,13 @@ void esp8266_session_timedTick(void) {
 				esp8266_session_state = INIT_MODE;
 				esp8266_session_sendCommand_P(esp8266_session_cmdMode);
 			}
+			break;
+
+		case SEND_INITIATED: // ----------------------------------------------------
+		case SEND_DATA:
+			esp8266_transc_send((void*) 0, 0); // Frees the buffer
+			esp8266_session_sendCompleteCB(err_timeout);
+			esp8266_session_state = IDLE;
 			break;
 
 		default: // ----------------------------------------------------------------

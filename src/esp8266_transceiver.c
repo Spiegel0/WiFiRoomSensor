@@ -552,10 +552,11 @@ void esp8266_transc_send(uint8_t *buffer, uint8_t size) {
 	sei();
 	esp8266_transc_sendIndex = 1;
 
-	UDR = buffer[0];
-
-	// Enable data register empty interrupt
-	UCSRB |= _BV(UDRIE);
+	if (size > 0){
+		UDR = buffer[0];
+		// Enable data register empty interrupt
+		UCSRB |= _BV(UDRIE);
+	}
 }
 
 /**
