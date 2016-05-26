@@ -120,7 +120,7 @@ static enum {
 	DATA_IN, ///< \brief Reads the message's data
 	READ_NL, ///< \brief Ignores any intermediate '\n' or '\r' characters
 	READ_STATUS, ///< \brief The message's status is read
-	CMD_PROMPT, ///< \brief A command prompt was transmitted (used to ignore it)
+	CMD_PROMPT, ///< \brief A command prompt was transmitted
 } esp8266_transc_state;
 
 /** \brief the status ok string */
@@ -424,8 +424,12 @@ static inline void esp8266_transc_processNextChar(void) {
 		break;
 
 	case CMD_PROMPT: // ----------------------------------------------------------
-		// Ignore the prompt sequence ("> ")
-		esp8266_transc_state = IDLE;
+		if (cChar == ' ') {
+			esp8266_transc_statusCB(err_inputExpected);
+			esp8266_transc_state = IDLE;
+		} else {
+			esp8266_transc_state = ERR;
+		}
 		esp8266_transc_decreaseBufferSync();
 		break;
 	}

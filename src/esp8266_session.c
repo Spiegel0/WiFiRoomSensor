@@ -36,7 +36,7 @@
 #include <stdlib.h>
 
 /** \brief The length of the internal message buffer in bytes */
-#define ESP8266_SESSION_BUFFER_SIZE (128)
+#define ESP8266_SESSION_BUFFER_SIZE (64)
 
 /** \brief The command buffer of the module */
 static uint8_t esp8266_session_buffer[ESP8266_SESSION_BUFFER_SIZE];
@@ -59,6 +59,7 @@ static enum {
 	INIT_LONG_RETRY,
 	INIT_MODE, ///< \brief Sets the wifi mode (AP, station, ...)
 	INIT_NETWORK, ///< \brief Configures the wireless network
+	SEND_INITIATED, ///< \brief Waits until the chip has acknowledged the request
 	SEND_DATA ///< \brief A sending operation is currently in progress
 } esp8266_session_state;
 
@@ -73,6 +74,11 @@ static uint8_t esp8266_session_retryCnt;
 
 /** \brief Variable which holds the send complete callback pointer */
 static esp8266_session_sendComplete_t esp8266_session_sendCompleteCB;
+
+/** \brief Holds a reference to the data which should be sent next */
+static uint8_t *esp8266_session_sendBufferReference;
+/** \brief Holds the amount of bytes of data to send */
+static uint8_t esp8266_session_sendBufferSize;
 
 /** \brief Persistent flag which indicates whether the chip is configured */
 uint8_t esp8266_session_chipConfigured EEMEM = 0;
@@ -120,9 +126,6 @@ status_t esp8266_session_send(uint8_t channel, uint8_t *buffer, uint8_t size,
 
 	if (channel > 3)
 		return err_invalidChannel;
-	if (size
-			> (ESP8266_SESSION_BUFFER_SIZE - ESP8266_SESSION_CMD_SEND_LENGTH - 10))
-		return err_sizeOutOfBounds;
 	if (esp8266_session_state != IDLE)
 		return err_invalidState;
 
@@ -137,11 +140,11 @@ status_t esp8266_session_send(uint8_t channel, uint8_t *buffer, uint8_t size,
 	esp8266_session_buffer[nextIndex++] = '\r';
 	esp8266_session_buffer[nextIndex++] = '\n';
 
-	(void) memcpy(&esp8266_session_buffer[nextIndex], buffer, size);
-	nextIndex += size;
-
 	esp8266_session_sendCompleteCB = sendCompleteCB;
-	esp8266_session_state = SEND_DATA;
+	esp8266_session_sendBufferReference = buffer;
+	esp8266_session_sendBufferSize = size;
+
+	esp8266_session_state = SEND_INITIATED;
 
 	esp8266_transc_send(esp8266_session_buffer, nextIndex);
 
@@ -191,6 +194,17 @@ static void esp8266_session_statusReceived(status_t status) {
 			esp8266_session_sendCommand_P(esp8266_session_cmdReset);
 		} else {
 			esp8266_session_handleInitError();
+		}
+		break;
+
+	case SEND_INITIATED: // ------------------------------------------------------
+		if (status == err_inputExpected) {
+			esp8266_session_state = SEND_DATA;
+			esp8266_transc_send(esp8266_session_sendBufferReference,
+					esp8266_session_sendBufferSize);
+		} else {
+			esp8266_session_sendCompleteCB(status);
+			esp8266_session_state = IDLE;
 		}
 		break;
 
