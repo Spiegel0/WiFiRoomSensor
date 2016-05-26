@@ -1,6 +1,8 @@
 /*
  * \file main.c
  * \brief Provides the reset vector and the main loop
+ * \details The main file implements the main application logic. It queries the
+ * sensors and responds to any request.
  * \author Michael Spiegel, <michael.h.spiegel@gmail.com>
  *
  * Copyright (C) 2016 Michael Spiegel
@@ -26,96 +28,207 @@
 
 #include <avr/io.h>
 #include <util/delay.h>
+#include <util/atomic.h>
 #include <avr/sfr_defs.h>
 #include <avr/interrupt.h>
 
+/** \brief Defines possible states of the sensor modules */
+typedef enum {
+	IDLE, ///< \brief Nothing to do
+	READ_AM2303_CHN0, ///< \brief Reads the first channel of the humidity sensor
+} main_sensorState_t;
+
+/** \brief The state of the sensor modules */
+static volatile main_sensorState_t main_sensor_state;
+/** \brief The last temperature result of channel 0 */
+static volatile uint16_t main_am2303_temperature_chn0;
+/** \brief The last humidity result of channel 0 */
+static volatile uint16_t main_am2303_humidity_chn0;
+
+/** \brief The number of ticks until the am2303 sensors may be read again */
+static uint8_t main_am2303_lockedTicks;
+
+/**
+ * \brief Encapsulates some of the data belonging to the main module.
+ */
+static struct {
+	/**
+	 * \brief Flags which indicate that a given channel needs service
+	 * \details The bit number corresponds to the network channel
+	 */
+	uint8_t requestFlags :4;
+	/** \brief Flag which indicates whether the message buffer is busy */
+	int8_t bufferBusy :1;
+} main_data;
+
+// Function Prototypes
+static void main_init(void);
+static void main_timedTick(void);
+static void main_tick(void);
+static void main_fetchData(void);
 void main_recordData(status_t status, uint16_t temperature, uint16_t humidity,
 		uint8_t channel);
-void statusCB(status_t status);
-void messageCB(status_t status, uint8_t channel, uint8_t size, uint8_t rrbID);
+static void main_sendReply(uint8_t channel);
+void main_freeReplyBuffer(status_t status);
+void main_decodeMessage(status_t status, uint8_t channel, uint8_t size,
+		uint8_t rrbID);
 
 int main(void) {
 
-	DDRB |= _BV(PB1);
+	//DDRB |= _BV(PB1);
 
-	system_timer_init();
-	am2303_init();
-	esp8266_session_init(messageCB);
+	main_init();
+
 	sei();
 
 	while (1) {
 		esp8266_transc_tick();
+		main_tick();
 		if (system_timer_query()) {
 			esp8266_session_timedTick();
+			main_timedTick();
 		}
-	}
-
-	while (1) {
-
-		PORTB |= _BV(PB1);
-
-		_delay_ms(2500);
-
-		PORTB &= ~_BV(PB1);
-
-		_delay_ms(2500);
-
-		am2303_startReading(1, &main_recordData);
-
 	}
 
 	return 0;
 }
 
-void statusCB(status_t status) {
-	PORTB |= _BV(PB1);
-	if (status == success) {
-		_delay_ms(1000);
-	} else {
-		_delay_ms(200);
-	}
-	PORTB &= ~_BV(PB1);
-}
-
-// FIXME: Line break in data content is transmitted at the beginning instead of the end.
-// FIXME: A single line break lets the implementation fail
-void messageCB(status_t status, uint8_t channel, uint8_t size, uint8_t rrbID) {
-
-	uint8_t i;
-	static uint8_t buffer[100];
-	if(size > 100) return;
-
-	for(i = 0; i < size; i++)
-		buffer[i] = esp8266_receiver_getByte(rrbID, i);
-
-	status = esp8266_session_send(channel, buffer, size, &statusCB);
+/**
+ * \brief Initializes the application and every sub module
+ * \details It is assumed that interrupts are globally disabled when calling the
+ * function.
+ */
+static void main_init(void) {
+	system_timer_init();
+	am2303_init();
+	esp8266_session_init(main_decodeMessage);
 }
 
 /**
- * \brief Test function which writes the received values to the UART
+ * \brief Maintains the \ref main_am2303_lockedTicks variable
+ */
+static void main_timedTick(void) {
+	if (main_am2303_lockedTicks > 0) {
+		main_am2303_lockedTicks--;
+	}
+}
+
+/**
+ * \brief Implements the network task which initiates new sending operations.
+ * \details The task checks the sensor status and the request flags. If recent
+ * data is available it assembles the message and send it.
+ */
+static void main_tick(void) {
+	main_sensorState_t sensorState;
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+	{
+		sensorState = main_sensor_state;
+	}
+
+	if (sensorState == IDLE && main_data.requestFlags) {
+		if (main_am2303_lockedTicks == 0) {
+			main_fetchData();
+		} else if (!main_data.bufferBusy) {
+			uint8_t chn = 0;
+			// Determine channel number
+			while (!(main_data.requestFlags & (1 << chn)) || chn >= 3) {
+				chn++;
+			}
+			main_data.requestFlags &= ~(1 << chn);
+
+			main_sendReply(chn);
+		}
+	}
+
+}
+
+/**
+ * \brief Assembles a reply message and initiates the transmission
+ * \details It is assumed that the bufferBusy flag is cleared before calling the
+ * function. Any transmission error will be ignored. The connected client has to
+ * initiate a re-transmission if the server fails.
+ * \param channel A valid channel identifier which specifies the destination
+ * channel.
+ */
+static void main_sendReply(uint8_t channel) {
+	static uint8_t replyBuffer[10];
+	uint8_t nextIndex = 0;
+	status_t status;
+
+	// TODO: fill the buffer correctly
+	replyBuffer[nextIndex++] = 'A';
+	replyBuffer[nextIndex++] = 'B';
+	replyBuffer[nextIndex++] = 'C';
+	replyBuffer[nextIndex++] = (main_am2303_temperature_chn0 >> 8);
+	replyBuffer[nextIndex++] = main_am2303_temperature_chn0 & 0xFF;
+	replyBuffer[nextIndex++] = (main_am2303_humidity_chn0 >> 8);
+	replyBuffer[nextIndex++] = main_am2303_humidity_chn0 & 0xFF;
+	replyBuffer[nextIndex++] = 'D';
+	replyBuffer[nextIndex++] = 'E';
+	replyBuffer[nextIndex++] = 'F';
+
+	status = esp8266_session_send(channel, replyBuffer, nextIndex,
+			main_freeReplyBuffer);
+
+	if (status == success) {
+		main_data.bufferBusy = 1;
+	}
+
+}
+
+/**
+ * \brief Clears the busy flag of the reply buffer
+ * \param status The status of the previously performed operation. Since
+ * re-transmission is delegated to the client, any error will be ignored.
+ */
+void main_freeReplyBuffer(status_t status) {
+	main_data.bufferBusy = 0;
+}
+
+/**
+ * \brief Decodes the previously received message and takes corresponding
+ * actions
+ * \details Any message with a status code other than success will be ignored.
+ * Currently, every received message will result in a reply request. It is
+ * assumed that every given parameter is valid. See
+ * \ref esp8266_transc_messageReceived for a detailed description of the
+ * parameters
+ * \see esp8266_transc_messageReceived
+ */
+void main_decodeMessage(status_t status, uint8_t channel, uint8_t size,
+		uint8_t rrbID) {
+	if (status == success) {
+		main_data.requestFlags |= (1 << channel);
+	}
+}
+
+/**
+ * \brief Initiates fetching the sensor data and maintains the sensor status
+ * \details It is assumed that the current sensor status in
+ * \ref main_sensor_state is IDLE and that \ref main_am2303_lockedTicks equals
+ * zero.
+ */
+static void main_fetchData(void) {
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+	{
+		main_sensor_state = READ_AM2303_CHN0;
+	}
+	main_am2303_lockedTicks = SYSTEM_TIMER_MS_TO_TICKS(10000);
+	am2303_startReading(0, main_recordData);
+}
+
+/**
+ * \brief Stores the fetched data locally and sets the sensor state
  */
 void main_recordData(status_t status, uint16_t temperature, uint16_t humidity,
 		uint8_t channel) {
 
-	loop_until_bit_is_set(UCSRA, UDRE);
-	UDR = 0xAA;
-
-	loop_until_bit_is_set(UCSRA, UDRE);
-	UDR = (uint8_t) status;
-
-	loop_until_bit_is_set(UCSRA, UDRE);
-	UDR = (uint8_t) (temperature >> 8);
-
-	loop_until_bit_is_set(UCSRA, UDRE);
-	UDR = (uint8_t) temperature;
-
-	loop_until_bit_is_set(UCSRA, UDRE);
-	UDR = (uint8_t) (humidity >> 8);
-
-	loop_until_bit_is_set(UCSRA, UDRE);
-	UDR = (uint8_t) humidity;
-
-	loop_until_bit_is_set(UCSRA, UDRE);
-	UDR = (uint8_t) channel;
+	if (status == success) {
+		if (channel == 0) {
+			main_am2303_temperature_chn0 = temperature;
+			main_am2303_humidity_chn0 = humidity;
+			main_sensor_state = IDLE;
+		}
+	}
 
 }
