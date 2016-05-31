@@ -24,6 +24,7 @@
 #include "am2303.h"
 #include "esp8266_transceiver.h"
 #include "esp8266_session.h"
+#include "iec61499_com.h"
 #include "system_timer.h"
 
 #include <avr/io.h>
@@ -151,21 +152,16 @@ static void main_tick(void) {
  * channel.
  */
 static void main_sendReply(uint8_t channel) {
-	static uint8_t replyBuffer[10];
+	static uint8_t replyBuffer[2 * IEC61499_COM_INT_ENC_SIZE];
 	uint8_t nextIndex = 0;
 	status_t status;
 
-	// TODO: fill the buffer correctly
-	replyBuffer[nextIndex++] = 'A';
-	replyBuffer[nextIndex++] = 'B';
-	replyBuffer[nextIndex++] = 'C';
-	replyBuffer[nextIndex++] = (main_am2303_temperature_chn0 >> 8);
-	replyBuffer[nextIndex++] = main_am2303_temperature_chn0 & 0xFF;
-	replyBuffer[nextIndex++] = (main_am2303_humidity_chn0 >> 8);
-	replyBuffer[nextIndex++] = main_am2303_humidity_chn0 & 0xFF;
-	replyBuffer[nextIndex++] = 'D';
-	replyBuffer[nextIndex++] = 'E';
-	replyBuffer[nextIndex++] = 'F';
+	iec61499_com_encodeINT(replyBuffer,
+			sizeof(replyBuffer) / sizeof(replyBuffer[0]), &nextIndex,
+			main_am2303_temperature_chn0);
+	iec61499_com_encodeINT(replyBuffer,
+			sizeof(replyBuffer) / sizeof(replyBuffer[0]), &nextIndex,
+			main_am2303_humidity_chn0);
 
 	status = esp8266_session_send(channel, replyBuffer, nextIndex,
 			main_freeReplyBuffer);
