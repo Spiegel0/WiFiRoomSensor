@@ -1,4 +1,4 @@
-/*
+/**
  * \file esp8266_transceiver.h
  * \brief The file specifies the main functions of the bottom communication
  * layer

@@ -1,11 +1,11 @@
-/*
+/**
  * \file system_timer.c
  * \brief The file implements the global system timer
  * \details The timer works interrupt driven and doesn't need regular
  * maintenance. It uses the following hardware resources:
  * <ul>
  * 	<li>8-bit Timer/Counter2</li>
- * </ul
+ * </ul>
  * \author Michael Spiegel, <michael.h.spiegel@gmail.com>
  *
  * Copyright (C) 2016 Michael Spiegel

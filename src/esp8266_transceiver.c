@@ -1,4 +1,4 @@
-/*
+/**
  * \file esp8266_transceiver.c
  * \brief The file implements the UART driver and implements simple decoding
  * tasks
@@ -10,7 +10,7 @@
  * <ul>
  *   <li>USART</li>
  *   <li>PDO (RxD)</li>
- *   <li>PD1 (TxD)</i>
+ *   <li>PD1 (TxD)</li>
  * </ul>
  *
  * \author Michael Spiegel, <michael.h.spiegel@gmail.com>
@@ -109,8 +109,8 @@ static enum {
 	ERR, ///< \brief Ignores the next chunk until \n is received
 	/**
 	 * \brief Waits until a status or command is received
-	 * \details Every '\r' and '\n' character will be absorbed until a '+' sign or
-	 * the first character of the status message is received.
+	 * \details Every '\\r' and '\\n' character will be absorbed until a '+' sign
+	 * or the first character of the status message is received.
 	 */
 	NL,
 	STATUS_MSG, ///< \brief Read the status message
@@ -118,7 +118,7 @@ static enum {
 	READ_CHN, ///< \brief Reads the channel number
 	READ_LENGTH, ///< \brief Reads the message length
 	DATA_IN, ///< \brief Reads the message's data
-	READ_NL, ///< \brief Ignores any intermediate '\n' or '\r' characters
+	READ_NL, ///< \brief Ignores any intermediate '\\n' or '\\r' characters
 	READ_STATUS, ///< \brief The message's status is read
 	CMD_PROMPT, ///< \brief A command prompt was transmitted
 } esp8266_transc_state;

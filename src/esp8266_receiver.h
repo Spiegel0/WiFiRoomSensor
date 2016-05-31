@@ -1,4 +1,4 @@
-/*
+/**
  * \file esp8266_receiver.h
  * \brief Specifies the ESP8266 receiver interface
  * \details The receiver interface consists of a callback specification and some

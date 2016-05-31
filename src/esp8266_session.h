@@ -1,4 +1,4 @@
-/*
+/**
  * \file esp8266_session.h
  * 
  * \brief The file specifies the interface of the ESP8266 session control module

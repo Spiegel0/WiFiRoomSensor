@@ -1,4 +1,4 @@
-/*
+/**
  * \file esp8266_session.c
  * 
  * \brief ESP8266 session management implementation
@@ -43,7 +43,7 @@ static uint8_t esp8266_session_buffer[ESP8266_SESSION_BUFFER_SIZE];
 
 /**
  * \brief Encodes the state of the module.
- * \details If the \ref esp8266_session_statusReceived function is called, the
+ * \details If the esp8266_session_statusReceived function is called, the
  * variable gives the current state and the function may change the state to
  * the logically successive state.
  */

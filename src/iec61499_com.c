@@ -1,5 +1,5 @@
-/*
- * \file iec61499_comm.c
+/**
+ * \file iec61499_com.c
  * \brief Implements the ASN.1 based encoding and decoding functionality.
  * \author Michael Spiegel, <michael.h.spiegel@gmail.com>
  *

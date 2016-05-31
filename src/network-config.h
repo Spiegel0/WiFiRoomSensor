@@ -1,4 +1,4 @@
-/*
+/**
  * \file network-config.h
  * \brief The file contains the default network configuration
  * \details Most parameters may be defined externally by passing the appropriate

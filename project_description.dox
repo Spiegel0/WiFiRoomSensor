@@ -1,0 +1,38 @@
+/**
+ * \mainpage
+ * The project implements a room sensor which can be accessed via TCP/IP. The 
+ * network protocol follows a simple scheme which is defined in the IEC 61499. 
+ * Currently, temperature and humidity values are measured via AM2303 sensors. 
+ * In order to interface the WiFi network, an ESP8266 with an AT firmware has 
+ * been deployed. The program runs on an Atmel AVR Mega8 microcontroller. Hence, 
+ * only the C source files of the microcontroller firmware and no other third 
+ * party firmware is contained.
+ *
+ * The network settings are statically configured in the file network-config.h. A separate file which should not be part of the project holds the WiFi password. It has to be named <code>src/pwd.txt</code> and must contain the preprocessor definition <code>#define NW_CONFIG_PWD "..."</code> defining the correct password.
+ *
+ * \section main_org Code Organization
+ *
+ * The source code was written with re-usability in mind. The main module holds 
+ * the application specific code and implements the main processing scheme. The 
+ * code of each hardware part is placed in separate modules which may be used 
+ * outside the project. In order to reduce the number of timers, a shared system
+ * timer is introduced. The main application periodically queries the timer and 
+ * coordinates the timed execution of various modules.
+ *
+ * \author Michael Spiegel, <michael.h.spiegel@gmail.com>
+ *
+ * Copyright (C) 2016 Michael Spiegel
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */

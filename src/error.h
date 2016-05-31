@@ -28,16 +28,16 @@
  * state, <code>success</code>, corresponds to a successfully completed operation.
  */
 typedef enum {
-	success = 0, //< \brief The operation was finished successfully
-	err_noChange, //< \brief Indicates that the operation changes nothing
-	err_inputExpected, //< \brief Indicates that an input is required
-	err_chksum, //< \brief The received checksum was invalid
-	err_noSignal, //< \brief No signal was received.
-	err_invalidChannel, //< \brief The requested channel does not exist
-	err_status, //< \brief The status message is not ok
-	err_sizeOutOfBounds, //< \brief Indicates that the given size is out of range
-	err_invalidState, //< \brief Indicates an invalid state
-	err_timeout //< \brief A timeout has occurred
+	success = 0, ///< \brief The operation was finished successfully
+	err_noChange, ///< \brief Indicates that the operation changes nothing
+	err_inputExpected, ///< \brief Indicates that an input is required
+	err_chksum, ///< \brief The received checksum was invalid
+	err_noSignal, ///< \brief No signal was received.
+	err_invalidChannel, ///< \brief The requested channel does not exist
+	err_status, ///< \brief The status message is not ok
+	err_sizeOutOfBounds, ///< \brief Indicates that the given size is out of range
+	err_invalidState, ///< \brief Indicates an invalid state
+	err_timeout ///< \brief A timeout has occurred
 } status_t;
 
 #endif /* ERROR_H_ */

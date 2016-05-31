@@ -1,4 +1,4 @@
-/*
+/**
  * \file am2303.c
  * \brief Implements the module which drives the DHT22/AM2303 sensor
  * \details The decoding logic is implemented in an interrupt driven way. It

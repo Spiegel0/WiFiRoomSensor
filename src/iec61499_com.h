@@ -1,4 +1,4 @@
-/*
+/**
  * \file iec61499_com.h
  * \brief Defines functions which encode and decode ASN.1-based messages from an
  * IEC 61499 compliant controller.
@@ -41,6 +41,7 @@
  * \param nextIndex A pointer to a memory location which holds the next index in
  * the buffer which should be populated. The location is increased by the size
  * of the target encoding.
+ * \param value The actual value which should be encoded.
  */
 void iec61499_com_encodeINT(uint8_t *buffer, uint8_t size, uint8_t *nextIndex,
 		int16_t value);

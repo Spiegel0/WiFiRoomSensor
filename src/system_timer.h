@@ -1,4 +1,4 @@
-/*
+/**
  * \file system_timer.h
  * \brief The header file specifies a global system timer and its interface
  * \details The system timer uses a dedicated hardware timer. It enables the

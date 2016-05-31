@@ -1,4 +1,4 @@
-/*
+/**
  * \file main.c
  * \brief Provides the reset vector and the main loop
  * \details The main file implements the main application logic. It queries the
