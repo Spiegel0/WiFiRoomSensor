@@ -27,6 +27,11 @@
 #include "iec61499_com.h"
 #include "system_timer.h"
 
+#ifndef NDEBUG
+#include "soft_uart.h"
+#include "avr/delay.h"
+#endif
+
 #include <avr/io.h>
 #include <util/delay.h>
 #include <util/atomic.h>
@@ -81,6 +86,13 @@ int main(void) {
 	main_init();
 
 	sei();
+
+#ifndef NDEBUG
+	soft_uart_init();
+	soft_uart_send('H');
+	soft_uart_send('i');
+	soft_uart_send('!');
+#endif
 
 	while (1) {
 		esp8266_transc_tick();
