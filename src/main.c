@@ -26,11 +26,7 @@
 #include "esp8266_session.h"
 #include "iec61499_com.h"
 #include "system_timer.h"
-
-#ifndef NDEBUG
-#include "soft_uart.h"
-#include "avr/delay.h"
-#endif
+#include "debug.h"
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -44,11 +40,24 @@ typedef enum {
 	READ_AM2303_CHN0, ///< \brief Reads the first channel of the humidity sensor
 } main_sensorState_t;
 
-/** \brief The state of the sensor modules */
+/**
+ * \brief The state of the sensor modules
+ * \brief The variable may be written in an interrupt context. If it is not
+ * IDLE, it must not be written outside the callback. Hence, the callback does
+ * not need to synchronize the variable access.
+ */
 static volatile main_sensorState_t main_sensor_state;
-/** \brief The last temperature result of channel 0 */
+/**
+ * \brief The last temperature result of channel 0
+ * \details The variable can be safely accessed outside an interrupt context if
+ * the main_sensor_state is IDLE.
+ */
 static volatile uint16_t main_am2303_temperature_chn0;
-/** \brief The last humidity result of channel 0 */
+/**
+ * \brief The last humidity result of channel 0
+ * \details The variable can be safely accessed outside an interrupt context if
+ * the main_sensor_state is IDLE.
+ */
 static volatile uint16_t main_am2303_humidity_chn0;
 
 /** \brief The number of ticks until the am2303 sensors may be read again */
@@ -87,13 +96,18 @@ int main(void) {
 
 	sei();
 
-#ifndef NDEBUG
-	soft_uart_init();
-	soft_uart_send('H');
-	soft_uart_send('i');
-	soft_uart_send('!');
-#endif
+	DEBUG_INIT;
+	DEBUG_PRINT(0,0x00);
+	DEBUG_PRINT(0,0x01);
+	DEBUG_PRINT(0,0x02);
+	DEBUG_PRINT(0,0x04);
+	DEBUG_PRINT(0,0x08);
+	DEBUG_PRINT(0,0x10);
+	DEBUG_PRINT(0,0x20);
+	DEBUG_PRINT(0,0x40);
+	DEBUG_PRINT(0,0x80);
 
+	// Main tasking scheme:
 	while (1) {
 		esp8266_transc_tick();
 		main_tick();
@@ -139,6 +153,9 @@ static void main_tick(void) {
 	}
 
 	if (sensorState == IDLE && main_data.requestFlags) {
+
+		DEBUG_PRINT(0x01, main_data.requestFlags);
+
 		if (main_am2303_lockedTicks == 0) {
 			main_fetchData();
 		} else if (!main_data.bufferBusy) {
@@ -227,6 +244,8 @@ static void main_fetchData(void) {
 
 /**
  * \brief Stores the fetched data locally and sets the sensor state
+ * \details If the status is not successful, the readings are skipped in order
+ * to process the next sensor.
  */
 void main_recordData(status_t status, uint16_t temperature, uint16_t humidity,
 		uint8_t channel) {
@@ -237,6 +256,10 @@ void main_recordData(status_t status, uint16_t temperature, uint16_t humidity,
 			main_am2303_humidity_chn0 = humidity;
 			main_sensor_state = IDLE;
 		}
+	} else {
+		main_sensor_state = IDLE;
 	}
+
+	DEBUG_PRINT(0x02, status);
 
 }
