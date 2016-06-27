@@ -30,7 +30,7 @@
 
 # \brief Lists each source file of the project relative to the source directory
 SRC_FILES = main.c am2303.c esp8266_transceiver.c system_timer.c
-SRC_FILES += esp8266_session.c iec61499_com.c soft_uart.c
+SRC_FILES += esp8266_session.c iec61499_com.c soft_uart.c oscillator.c
 
 # \brief The name of the project
 PROJECT = WiFiRoomSensor
@@ -56,6 +56,7 @@ PSIZE = avr-size
 OCOPY = avr-objcopy
 ODUMP = avr-objdump
 DOX = doxygen
+GDB = gdb
 
 # \brief The compiler flags
 CC_FLAGS	=  -mmcu=$(MCU) -DF_CPU=$(F_CPU) -Wall -Wstrict-prototypes -O3
@@ -67,7 +68,9 @@ CC_FLAGS	+= -std=gnu99
 LD_FLAGS	=  -mmcu=$(MCU)
 
 # \brief The programmer flags
-PROG_FLAGS = -p$(PROG_MCU) -cavrisp2 -Pusb -Ulfuse:w:0xe4:m -Uhfuse:w:0xd1:m
+PROG_FLAGS = -p$(PROG_MCU) -cavrisp2 -Pusb
+# \brief The fuse values to set
+PROG_FUSE = -Ulfuse:w:0xe4:m -Uhfuse:w:0xd1:m
 
 # \brief The destination object files
 OBJ=$(SRC_FILES:%.c=$(BINDIR)/%.o)
@@ -76,8 +79,7 @@ OBJ=$(SRC_FILES:%.c=$(BINDIR)/%.o)
 
 all: binary
 
-binary: $(BINDIR)/$(PROJECT).hex $(BINDIR)/$(PROJECT).eep \
-	$(BINDIR)/$(PROJECT).lss size
+binary: $(BINDIR)/$(PROJECT).elf $(BINDIR)/$(PROJECT).lss size
 
 $(BINDIR):
 	mkdir $(BINDIR)
@@ -91,10 +93,22 @@ $(BINDIR)/%.o: $(SRCDIR)/%.c $(BINDIR) $(SRCDIR)/*.h
 $(BINDIR)/$(PROJECT).elf: $(OBJ)
 	$(LD) $(LD_FLAGS) -o $@ $^
 
-$(BINDIR)/$(PROJECT).hex: $(BINDIR)/$(PROJECT).elf
+# \brief Reads the calibration from the connected MCU
+$(BINDIR)/calibration.txt:
+	$(PROG) $(PROG_FLAGS) -Ucalibration:r:$@:h
+
+# Sets the dynamic variables 
+$(BINDIR)/$(PROJECT).mod.elf: $(BINDIR)/$(PROJECT).elf $(BINDIR)/calibration.txt
+	cp $< $@
+	echo -n "set var (char[4]) oscillator_calibration = { " > $(BINDIR)/conf.batch
+	cat $(BINDIR)/calibration.txt | tr -d '\n\r' >> $(BINDIR)/conf.batch
+	echo " }" >> $(BINDIR)/conf.batch
+	$(GDB) -batch -x $(BINDIR)/conf.batch --write $@
+
+$(BINDIR)/$(PROJECT).hex: $(BINDIR)/$(PROJECT).mod.elf
 	$(OCOPY) -R .eeprom -R .fuse -R .lock -R .signature -O ihex $< $@
 
-$(BINDIR)/$(PROJECT).eep: $(BINDIR)/$(PROJECT).elf
+$(BINDIR)/$(PROJECT).eep: $(BINDIR)/$(PROJECT).mod.elf
 	$(OCOPY) -j .eeprom --no-change-warnings --change-section-lma .eeprom=0 \
 			-O ihex $< $@
 
@@ -107,7 +121,8 @@ size: $(BINDIR)/$(PROJECT).elf
 install: $(BINDIR)/$(PROJECT).hex $(BINDIR)/$(PROJECT).eep
 	$(PROG) $(PROG_FLAGS) \
 			-Uflash:w:$(BINDIR)/$(PROJECT).hex:a \
-			-Ueeprom:w:$(BINDIR)/$(PROJECT).eep:a
+			-Ueeprom:w:$(BINDIR)/$(PROJECT).eep:a \
+			 $(PROG_FUSE)
 
 doc: $(DOCDIR) $(SRCDIR)/*.c $(SRCDIR)/*.h
 	$(DOX) Doxyfile

@@ -41,7 +41,6 @@
 void soft_uart_init(void) {
 	SOFT_UART_TXPORT |= _BV(SOFT_UART_TXNR);
 	SOFT_UART_TXDDR |= _BV(SOFT_UART_TXNR);
-	OSCCAL = 0xb5; // TODO: Refactor in anther module with non-static value
 	_delay_us(87); // Wait until the spurious byte is transmit
 }
 

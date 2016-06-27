@@ -27,6 +27,7 @@
 #include "iec61499_com.h"
 #include "system_timer.h"
 #include "debug.h"
+#include "oscillator.h"
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -96,16 +97,17 @@ int main(void) {
 
 	sei();
 
-	DEBUG_INIT;
-	DEBUG_PRINT(0,0x00);
-	DEBUG_PRINT(0,0x01);
-	DEBUG_PRINT(0,0x02);
-	DEBUG_PRINT(0,0x04);
-	DEBUG_PRINT(0,0x08);
-	DEBUG_PRINT(0,0x10);
-	DEBUG_PRINT(0,0x20);
-	DEBUG_PRINT(0,0x40);
-	DEBUG_PRINT(0,0x80);
+	DEBUG_INIT
+	;
+	DEBUG_PRINT(0, 0x00);
+	DEBUG_PRINT(0, 0x01);
+	DEBUG_PRINT(0, 0x02);
+	DEBUG_PRINT(0, 0x04);
+	DEBUG_PRINT(0, 0x08);
+	DEBUG_PRINT(0, 0x10);
+	DEBUG_PRINT(0, 0x20);
+	DEBUG_PRINT(0, 0x40);
+	DEBUG_PRINT(0, 0x80);
 
 	// Main tasking scheme:
 	while (1) {
@@ -126,6 +128,7 @@ int main(void) {
  * function.
  */
 static void main_init(void) {
+	oscillator_init();
 	system_timer_init();
 	am2303_init();
 	esp8266_session_init(main_decodeMessage);
