@@ -42,32 +42,26 @@
  */
 uint8_t oscillator_calibration[] EEMEM = { 0x00, 0x00, 0x00, 0x00 };
 
-#if F_CPU == 1000000UL
+#if F_CPU <= 1000000UL
 /**
  * \brief The index of the correct OSCAL value in \ref oscillator_calibration
  */
 #define OSCILLATOR_F_INDEX (0)
-#elif F_CPU == 2000000UL
+#elif F_CPU <= 2000000UL
 /**
  * \brief The index of the correct OSCAL value in \ref oscillator_calibration
  */
 #define OSCILLATOR_F_INDEX (1)
-#elif F_CPU == 4000000UL
+#elif F_CPU <= 4000000UL
 /**
  * \brief The index of the correct OSCAL value in \ref oscillator_calibration
  */
 #define OSCILLATOR_F_INDEX (2)
-#elif F_CPU == 8000000UL
-/**
- * \brief The index of the correct OSCAL value in \ref oscillator_calibration
- */
-#define OSCILLATOR_F_INDEX (3)
 #else
 /**
  * \brief The index of the correct OSCAL value in \ref oscillator_calibration
  */
-#define OSCILLATOR_F_INDEX (0)
-#warning "F_CPU is not set to a valid frequency for the internal RC oscillator"
+#define OSCILLATOR_F_INDEX (3)
 #endif
 
 void oscillator_init(void) {

@@ -46,7 +46,11 @@ MCU = atmega8
 # \brief The target microcontroller for avrdude
 PROG_MCU = m8
 # \brief The CPU frequency
-F_CPU = 8000000UL
+F_CPU = 8280000UL
+# \brief If defined, overrides the read oscal values. 
+# \details The values may be used to tweak the frequency of the processor such 
+# that the required UART baudrate can be achieved
+MAN_OSCCAL = 0xbb,0xbb,0xbb,0xbb
 
 # The commands in use
 CC = avr-gcc
@@ -62,7 +66,7 @@ GDB = gdb
 CC_FLAGS	=  -mmcu=$(MCU) -DF_CPU=$(F_CPU) -Wall -Wstrict-prototypes -O3
 CC_FLAGS	+= -frename-registers -fshort-enums -fpack-struct
 CC_FLAGS	+= -std=gnu99
-# CC_FLAGS	+= -DNDEBUG
+#CC_FLAGS	+= -DNDEBUG
 
 # \brief The linker flags
 LD_FLAGS	=  -mmcu=$(MCU)
@@ -97,12 +101,20 @@ $(BINDIR)/$(PROJECT).elf: $(OBJ)
 $(BINDIR)/calibration.txt:
 	$(PROG) $(PROG_FLAGS) -Ucalibration:r:$@:h
 
+# Create the batch file which manipulates the oscal value
+ifdef MAN_OSCCAL
+$(BINDIR)/conf.batch:
+	echo "set var (char[4]) oscillator_calibration = { $(MAN_OSCCAL) }" > $@
+else
+$(BINDIR)/conf.batch: $(BINDIR)/calibration.txt
+	echo -n "set var (char[4]) oscillator_calibration = { " > $@
+	cat $(BINDIR)/calibration.txt | tr -d '\n\r' >> $@
+	echo " }" >> $@
+endif
+
 # Sets the dynamic variables 
-$(BINDIR)/$(PROJECT).mod.elf: $(BINDIR)/$(PROJECT).elf $(BINDIR)/calibration.txt
+$(BINDIR)/$(PROJECT).mod.elf: $(BINDIR)/$(PROJECT).elf $(BINDIR)/conf.batch
 	cp $< $@
-	echo -n "set var (char[4]) oscillator_calibration = { " > $(BINDIR)/conf.batch
-	cat $(BINDIR)/calibration.txt | tr -d '\n\r' >> $(BINDIR)/conf.batch
-	echo " }" >> $(BINDIR)/conf.batch
 	$(GDB) -batch -x $(BINDIR)/conf.batch --write $@
 
 $(BINDIR)/$(PROJECT).hex: $(BINDIR)/$(PROJECT).mod.elf

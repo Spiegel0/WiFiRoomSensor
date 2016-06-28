@@ -32,6 +32,7 @@
  */
 
 #include "esp8266_transceiver.h"
+#include "debug.h"
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -39,6 +40,7 @@
 
 /** \brief If the variable is defined, debug messages are suppressed */
 #define ESP8266_TRANSC_NDEBUG
+
 /**
  * \brief The size of the round robin buffer used to store received values
  * \details The size always has to be a power of two.
@@ -162,14 +164,11 @@ void esp8266_transc_init(esp8266_transc_statusReceived statusCB,
 	esp8266_transc_state = IDLE;
 
 	// Initializes the UART to 115200-8-N-1, receive interrupt enabled
-#define BAUD (115200)
-#include <util/setbaud.h>
-
-	UCSRA = USE_2X << U2X;
+	UCSRA = _BV(U2X);
 	UCSRB = _BV(RXCIE) | _BV(RXEN) | _BV(TXEN);
 	UCSRC = _BV(URSEL) | _BV(UCSZ1) | _BV(UCSZ0);
-	UBRRL = UBRRL_VALUE;
-	UBRRH = UBRRH_VALUE;
+	UBRRL = 8;
+	UBRRH = 0;
 }
 
 #ifndef ESP8266_TRANSC_NDEBUG
@@ -178,49 +177,17 @@ void esp8266_transc_init(esp8266_transc_statusReceived statusCB,
  * \details The function uses busy wait until the data is written
  */
 static void esp8266_transc_debugState(void) {
-	uint8_t uart_state;
 
-	cli();
-	uart_state = UCSRB;
-	UCSRB &= ~(_BV(TXCIE) | _BV(UDRIE)); // Disable interrupts
-	sei();
+	DEBUG_PRINT_START(0x10);
 
-	while (!(UCSRA & _BV(UDRE)))
-	;// Wait
-	UDR = 0xAA;// magic number
-	while (!(UCSRA & _BV(UDRE)))
-	;// Wait
-	UDR = (uint8_t) esp8266_transc_state;
-	while (!(UCSRA & _BV(UDRE)))
-	;// Wait
-	UDR = (uint8_t) esp8266_transc_rrAllocation;
-	while (!(UCSRA & _BV(UDRE)))
-	;// Wait
-	UDR = (uint8_t) esp8266_transc_rrFirst;
-	while (!(UCSRA & _BV(UDRE)))
-	;// Wait
-	UDR = (uint8_t) esp8266_transc_rrFirstUnprocessed;
-	while (!(UCSRA & _BV(UDRE)))
-	;// Wait
-	UDR = (uint8_t) esp8266_transc_nextEcho;
-	while (!(UCSRA & _BV(UDRE)))
-	;// Wait
-	UDR = (uint8_t) esp8266_transc_rrBuffer[esp8266_transc_rrFirstUnprocessed];
-	while (!(UCSRA & _BV(UDRE)))
-	;// Wait
-	UDR = (uint8_t) esp8266_transc_rcvChannelID;
-	while (!(UCSRA & _BV(UDRE)))
-	;// Wait
-	UDR = (uint8_t) esp8266_transc_rcvSize;
-	while (!(UCSRA & _BV(UDRE)))
-	;// Wait
-	UDR = 0x55;// magic number
-	while (!(UCSRA & _BV(UDRE)))
-	;// Wait
-
-	cli();
-	UCSRB = uart_state;// Reset the UART state
-	sei();
+	DEBUG_BYTE(esp8266_transc_rrBuffer[esp8266_transc_rrFirstUnprocessed]);
+	DEBUG_BYTE(esp8266_transc_state);
+	DEBUG_BYTE(esp8266_transc_rrAllocation);
+	DEBUG_BYTE(esp8266_transc_rrFirst);
+	DEBUG_BYTE(esp8266_transc_rrFirstUnprocessed);
+	DEBUG_BYTE(esp8266_transc_nextEcho);
+	DEBUG_BYTE(esp8266_transc_rcvChannelID);
+	DEBUG_BYTE(esp8266_transc_rcvSize);
 }
 #endif
 

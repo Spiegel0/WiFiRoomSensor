@@ -52,10 +52,30 @@
 		_delay_us(50); \
 	}while(0)
 
+/**
+ * \brief Prints a variable length start sequence
+ * \details The first argument is the message identifier
+ */
+#define DEBUG_PRINT_START(id) do{ \
+		soft_uart_send(0x55); \
+		soft_uart_send((id)); \
+	}while(0)
+
+/**
+ * \brief Prints the val byte
+ * \details It is advised to start the variable length debug sequence by calling
+ * DEBUG_PRINT_START.
+ */
+#define DEBUG_BYTE(val) \
+	soft_uart_send((val))
+
 #else // --------------- Dummy functions ---------------------
 
 #define DEBUG_INIT while(0)
 #define DEBUG_PRINT(id,val) while(0)
+#define DEBUG_PRINT_START(id) while(0)
+#define DEBUG_BYTE(val) while(0)
+
 #endif
 
 #endif /* DEBUG_H_ */
