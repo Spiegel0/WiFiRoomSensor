@@ -30,6 +30,7 @@
  */
 
 #include "am2303.h"
+#include "debug.h"
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -69,6 +70,14 @@ am2303_readDone_t am2303_callback;
 
 /** \brief A buffer which contains the received message */
 uint8_t am2303_messageBuffer[AM2303_MESSAGE_SIZE];
+
+/**
+ * \brief returns the number of timer ticks for the given configuration
+ * \param prescaler The currently used prescaler
+ * \param us2top the time consumed by all ticks
+ */
+#define AM2303_TICK_VAL(prescaler,us2top) \
+	((F_CPU/(prescaler)*(us2top) + 1000000UL - 1)/(1000000UL))
 
 /* Function prototypes */
 inline void am2303_processMessage(void);
@@ -112,7 +121,8 @@ void am2303_startReading(uint8_t channel, am2303_readDone_t callback) {
 	// Setup timer to fire in ~18ms
 	TCCR0 = _BV(CS02) | _BV(CS00); // Prescaler 1024
 	TIFR |= _BV(TOV0); // Clear flag
-	TCNT0 = 115;
+	TCNT0 = 256 - AM2303_TICK_VAL(1024UL,18000UL);
+
 	TIMSK |= _BV(TOIE0);
 }
 
