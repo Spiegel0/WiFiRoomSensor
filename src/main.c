@@ -2,7 +2,9 @@
  * \file main.c
  * \brief Provides the reset vector and the main loop
  * \details The main file implements the main application logic. It queries the
- * sensors and responds to any request.
+ * sensors and responds to any request. If the preprocessor variable
+ * USE_AM2303_CHN1 is defined, the second sensor channel will be queried.
+ *
  * \author Michael Spiegel, <michael.h.spiegel@gmail.com>
  *
  * Copyright (C) 2016 Michael Spiegel
@@ -39,6 +41,7 @@
 typedef enum {
 	IDLE, ///< \brief Nothing to do
 	READ_AM2303_CHN0, ///< \brief Reads the first channel of the humidity sensor
+	READ_AM2303_CHN1, ///< \brief Reads the second channel of the humidity sensor
 } main_sensorState_t;
 
 /**
@@ -60,6 +63,20 @@ static volatile uint16_t main_am2303_temperature_chn0;
  * the main_sensor_state is IDLE.
  */
 static volatile uint16_t main_am2303_humidity_chn0;
+#ifdef USE_AM2303_CHN1
+/**
+ * \brief The last temperature result of channel 1
+ * \details The variable can be safely accessed outside an interrupt context if
+ * the main_sensor_state is IDLE.
+ */
+static volatile uint16_t main_am2303_temperature_chn1;
+/**
+ * \brief The last humidity result of channel 1
+ * \details The variable can be safely accessed outside an interrupt context if
+ * the main_sensor_state is IDLE.
+ */
+static volatile uint16_t main_am2303_humidity_chn1;
+#endif
 
 /** \brief The number of ticks until the am2303 sensors may be read again */
 static uint8_t main_am2303_lockedTicks;
@@ -97,7 +114,8 @@ int main(void) {
 
 	sei();
 
-	DEBUG_INIT;
+	DEBUG_INIT
+		;
 	DEBUG_PRINT_START(0x00);
 	DEBUG_BYTE(0x01);
 	DEBUG_BYTE(0x02);
@@ -183,7 +201,7 @@ static void main_tick(void) {
  * channel.
  */
 static void main_sendReply(uint8_t channel) {
-	static uint8_t replyBuffer[2 * IEC61499_COM_INT_ENC_SIZE];
+	static uint8_t replyBuffer[4 * IEC61499_COM_INT_ENC_SIZE];
 	uint8_t nextIndex = 0;
 	status_t status;
 
@@ -193,6 +211,14 @@ static void main_sendReply(uint8_t channel) {
 	iec61499_com_encodeINT(replyBuffer,
 			sizeof(replyBuffer) / sizeof(replyBuffer[0]), &nextIndex,
 			main_am2303_humidity_chn0);
+#ifdef USE_AM2303_CHN1
+	iec61499_com_encodeINT(replyBuffer,
+			sizeof(replyBuffer) / sizeof(replyBuffer[0]), &nextIndex,
+			main_am2303_temperature_chn1);
+	iec61499_com_encodeINT(replyBuffer,
+			sizeof(replyBuffer) / sizeof(replyBuffer[0]), &nextIndex,
+			main_am2303_humidity_chn1);
+#endif
 
 	status = esp8266_session_send(channel, replyBuffer, nextIndex,
 			main_freeReplyBuffer);
@@ -244,24 +270,54 @@ static void main_fetchData(void) {
 	am2303_startReading(0, main_recordData);
 }
 
+#ifdef USE_AM2303_CHN1
 /**
  * \brief Stores the fetched data locally and sets the sensor state
- * \details If the status is not successful, the readings are skipped in order
- * to process the next sensor.
+ * \details The function starts reading the second humidity sensor if the first
+ * one was queried. If the status is not successful, the readings are skipped
+ * and the next sensor is queried.
  */
 void main_recordData(status_t status, uint16_t temperature, uint16_t humidity,
 		uint8_t channel) {
 
-	if (status == success) {
-		if (channel == 0) {
+	if (channel == 0) {
+
+		if (status == success) {
 			main_am2303_temperature_chn0 = temperature;
 			main_am2303_humidity_chn0 = humidity;
-			main_sensor_state = IDLE;
 		}
-	} else {
+		main_sensor_state = READ_AM2303_CHN1;
+		am2303_startReading(1, main_recordData);
+
+	} else if (channel == 1) {
+		if (status == success) {
+			main_am2303_temperature_chn1 = temperature;
+			main_am2303_humidity_chn1 = humidity;
+		}
 		main_sensor_state = IDLE;
 	}
 
 	DEBUG_PRINT(0x02, status);
 
 }
+#else
+/**
+ * \brief Stores the fetched data locally and sets the sensor state
+ * \details If the status is not successful, the readings are skipped and the
+ * state is set to IDLE
+ */
+void main_recordData(status_t status, uint16_t temperature, uint16_t humidity,
+		uint8_t channel) {
+
+	if (channel == 0) {
+		if (status == success) {
+			main_am2303_temperature_chn0 = temperature;
+			main_am2303_humidity_chn0 = humidity;
+		}
+		main_sensor_state = IDLE;
+	}
+
+	DEBUG_PRINT(0x02, status);
+}
+#endif
+
