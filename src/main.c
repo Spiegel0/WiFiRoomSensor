@@ -107,6 +107,9 @@ static void main_sendReply(uint8_t channel);
 void main_freeReplyBuffer(status_t status);
 void main_decodeMessage(status_t status, uint8_t channel, uint8_t size,
 		uint8_t rrbID);
+#ifdef USE_WS2801
+void main_decodeWS2801Command(uint8_t size, uint8_t rrbID);
+#endif
 
 int main(void) {
 
@@ -260,8 +263,49 @@ void main_decodeMessage(status_t status, uint8_t channel, uint8_t size,
 		uint8_t rrbID) {
 	if (status == success) {
 		main_data.requestFlags |= (1 << channel);
+
+#ifdef USE_WS2801
+		main_decodeWS2801Command(size, rrbID);
+#endif
 	}
 }
+
+#ifdef USE_WS2801
+/**
+ * \brief Tries to decode the WS2801 command in the receive buffer
+ * \details If the command was parsed successfully, it will be executed
+ * immediately. The first USINT corresponds to the pixel number, the next three
+ * USINT values denote the RGB value and the BOOL flag indicates whether to
+ * update the values.
+ * \param size The number of received bytes
+ * \param rrbID The round robin buffer ID of the first byte.
+ */
+void main_decodeWS2801Command(uint8_t size, uint8_t rrbID) {
+	status_t err;
+	uint8_t nextIndex = 0;
+	uint8_t pos = 0, rVal = 0, gVal = 0, bVal = 0, update = 0;
+
+	err = iec61499_com_decodeUSINT(rrbID, size, &nextIndex, &pos);
+	IEC6199_COM_TRY(err,
+			iec61499_com_decodeUSINT(rrbID, size, &nextIndex, &rVal));
+	IEC6199_COM_TRY(err,
+			iec61499_com_decodeUSINT(rrbID, size, &nextIndex, &gVal));
+	IEC6199_COM_TRY(err,
+			iec61499_com_decodeUSINT(rrbID, size, &nextIndex, &bVal));
+	IEC6199_COM_TRY(err,
+			iec61499_com_decodeBOOL(rrbID, size, &nextIndex, &update));
+
+	DEBUG_PRINT(0x03, err);
+
+	if (err == success) {
+		(void) ws2801_setValue(pos, rVal, gVal, bVal);
+		if (update) {
+			(void) ws2801_update();
+		}
+	}
+
+}
+#endif
 
 /**
  * \brief Initiates fetching the sensor data and maintains the sensor status

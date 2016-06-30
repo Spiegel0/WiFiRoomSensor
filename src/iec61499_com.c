@@ -21,6 +21,8 @@
 
 #include "iec61499_com.h"
 
+#include "esp8266_receiver.h"
+
 /** \brief Flags which indicate an application specific ASN.1 type class */
 #define IEC61499_COM_CLASS_APPLICATION (0x40)
 
@@ -30,6 +32,24 @@
  * 61499
  */
 #define IEC61499_COM_TAG_INT (3)
+/**
+ * \brief The ASN.1 tag number of USINT without any flags
+ * \details The tag numbers are defined in the informative Annex E of the IEC
+ * 61499
+ */
+#define IEC61499_COM_TAG_USINT (6)
+/**
+ * \brief The ASN.1 tag number of a BOOL TRUE value without any flags
+ * \details The tag numbers are defined in the informative Annex E of the IEC
+ * 61499
+ */
+#define IEC61499_COM_TAG_TRUE (1)
+/**
+ * \brief The ASN.1 tag number of a BOOL FALSE value without any flags
+ * \details The tag numbers are defined in the informative Annex E of the IEC
+ * 61499
+ */
+#define IEC61499_COM_TAG_FALSE (0)
 
 void iec61499_com_encodeINT(uint8_t *buffer, uint8_t size, uint8_t *nextIndex,
 		int16_t value) {
@@ -42,4 +62,46 @@ void iec61499_com_encodeINT(uint8_t *buffer, uint8_t size, uint8_t *nextIndex,
 
 	*nextIndex += IEC61499_COM_INT_ENC_SIZE;
 
+}
+
+status_t iec61499_com_decodeUSINT(uint8_t rrbID, uint8_t size,
+		uint8_t *nextIndex, uint8_t *value) {
+
+	if (*nextIndex + IEC61499_COM_USINT_ENC_SIZE > size) {
+		return err_indexOutOfBounds;
+	}
+
+	if (esp8266_receiver_getByte(rrbID, *nextIndex)
+			!= (IEC61499_COM_TAG_USINT | IEC61499_COM_CLASS_APPLICATION)) {
+		return err_invalidMagicNumber;
+	}
+
+	*value = esp8266_receiver_getByte(rrbID, *nextIndex + 1);
+	*nextIndex += IEC61499_COM_USINT_ENC_SIZE;
+	return success;
+}
+
+status_t iec61499_com_decodeBOOL(uint8_t rrbID, uint8_t size,
+		uint8_t *nextIndex, uint8_t *value) {
+
+	if (*nextIndex + IEC61499_COM_BOOL_ENC_SIZE > size) {
+		return err_indexOutOfBounds;
+	}
+
+	if (esp8266_receiver_getByte(rrbID, *nextIndex)
+			== (IEC61499_COM_TAG_TRUE | IEC61499_COM_CLASS_APPLICATION)) {
+
+		*value = (uint8_t)(-1);
+
+	}else if(esp8266_receiver_getByte(rrbID, *nextIndex)
+			== (IEC61499_COM_TAG_FALSE | IEC61499_COM_CLASS_APPLICATION)){
+
+		*value = 0;
+
+	}else{
+		return err_invalidMagicNumber;
+	}
+
+	*nextIndex += IEC61499_COM_BOOL_ENC_SIZE;
+	return success;
 }
