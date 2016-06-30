@@ -31,6 +31,7 @@
 # \brief Lists each source file of the project relative to the source directory
 SRC_FILES = main.c am2303.c esp8266_transceiver.c system_timer.c
 SRC_FILES += esp8266_session.c iec61499_com.c soft_uart.c oscillator.c
+SRC_FILES += ws2801.c
 
 # \brief The name of the project
 PROJECT = WiFiRoomSensor
@@ -67,6 +68,8 @@ CC_FLAGS	=  -mmcu=$(MCU) -DF_CPU=$(F_CPU) -Wall -Wstrict-prototypes -O3
 CC_FLAGS	+= -frename-registers -fshort-enums -fpack-struct
 CC_FLAGS	+= -std=gnu99
 #CC_FLAGS	+= -DNDEBUG
+CC_FLAGS += -DUSE_AM2303_CHN1
+CC_FLAGS += -DUSE_WS2801
 
 # \brief The linker flags
 LD_FLAGS	=  -mmcu=$(MCU)

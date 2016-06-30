@@ -4,6 +4,7 @@
  * \details The main file implements the main application logic. It queries the
  * sensors and responds to any request. If the preprocessor variable
  * USE_AM2303_CHN1 is defined, the second sensor channel will be queried.
+ * Similarly, defining the variable USE_WS2801 will enable the LED controller.
  *
  * \author Michael Spiegel, <michael.h.spiegel@gmail.com>
  *
@@ -30,6 +31,7 @@
 #include "system_timer.h"
 #include "debug.h"
 #include "oscillator.h"
+#include "ws2801.h"
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -133,6 +135,9 @@ int main(void) {
 		if (system_timer_query()) {
 			esp8266_session_timedTick();
 			main_timedTick();
+#ifdef USE_WS2801
+			ws2801_timedTick();
+#endif
 		}
 	}
 
@@ -147,6 +152,9 @@ int main(void) {
 static void main_init(void) {
 	oscillator_init();
 	system_timer_init();
+#ifdef USE_WS2801
+	ws2801_init();
+#endif
 	am2303_init();
 	esp8266_session_init(main_decodeMessage);
 }
