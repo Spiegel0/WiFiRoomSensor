@@ -28,7 +28,7 @@
 #ifndef NDEBUG
 
 #include "soft_uart.h"
-#include <avr/delay.h>
+#include <util/delay.h>
 
 /**
  * \brief Initializes the soft uart and prints a hello message

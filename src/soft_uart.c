@@ -27,8 +27,8 @@
 
 #include "soft_uart.h"
 
-#include <avr/delay.h>
 #include <avr/io.h>
+#include <util/delay.h>
 #include <util/atomic.h>
 
 /** \brief The transmission port register */
