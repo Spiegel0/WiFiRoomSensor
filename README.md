@@ -1,7 +1,7 @@
 WiFiRoomSensor
 ==============
 
-The WiFiRoomSensor is a piece of hardware which provides a network interface to measure the temperature and humidity. It also provides some buttons and RGB LEDs to interact with the HVAC controller. It acts as a distributed IO device and does not implement any HVAC logic. The WiFiRoomSensor is tested with the IEC 61499 compatible HVAC controller [4DIAC Forte](http://www.eclipse.org/4diac/) and FBRT. Since the sensor is designed to fulfill a very specific purpose, it may not be directly useful. However, I tried to abstract the functionality in several modules which might be useful by its own. Please be aware that the sensor is still under active development. If you find a bug or if you need some information, please feel free to write me an e-mail or open a ticket. If you want to start hacking, I suggest building the doxygen documentation which may give further hints.
+The WiFiRoomSensor is a piece of hardware which provides a network interface to measure the temperature and humidity. It also provides some buttons and RGB LEDs to interact with the HVAC controller. It acts as a distributed IO device and does not implement any HVAC logic. The WiFiRoomSensor is tested with the IEC 61499 compatible HVAC controller [4DIAC Forte](http://www.eclipse.org/4diac/) and [FBRT](http://holobloc.com/). Since the sensor is designed to fulfill a very specific purpose, it may not be directly useful. However, I tried to abstract the functionality in several modules which might be useful by its own. Please be aware that the sensor is still under active development. If you find a bug or if you need some information, please feel free to write me an e-mail or open a ticket. If you want to start hacking into the design, I suggest building the doxygen documentation which may give further hints.
 
 # Features
 
@@ -16,14 +16,14 @@ Currently, the following features are implemented:
 Planned features which are still under development:
 - Simple user interface which is driven by three buttons ("Up", "Down", "Ok")
 
-I used the external processor instead of the ESP 8266 because the available documentation of the ESP8266 was not satisfying. It turned out that the AT command set of the flashed firmware also deviates from the documentation. In addition, the available documentation of the ESP 8266 was significantly improved. From todays point of view I would use the ESP 8266 only, but I also don't want to rewrite all the code.
+I used the external processor instead of the ESP 8266 because the available documentation of the ESP8266 was not satisfying. It turned out that the AT command set of the flashed firmware also deviates from the documentation. In addition, the available documentation of the ESP 8266 was significantly improved recently. From todays point of view I would use the ESP 8266 only, but I also don't want to rewrite all the code.
 
 # License and Warranty
 
-WiFiRoomSensor
-
 The project is primarily licensed by the GPL. If you need a more commercially 
 friendly open source license, please feel free to contact me.
+
+WiFiRoomSensor
 
 Copyright (C) 2016 Michael Spiegel
 E-Mail: michael.h.spiegel@gmail.com
