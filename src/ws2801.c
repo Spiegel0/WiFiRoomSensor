@@ -82,7 +82,7 @@ void ws2801_init(void) {
 
 	// Master, enabled interrupts, MSBit first, sample on rising edge,
 	// low when idle
-	SPCR = _BV(SPIE) | _BV(SPE) | _BV(MSTR);
+	SPCR = _BV(SPIE) | _BV(SPE) | _BV(MSTR) | _BV(SPR1) | _BV(SPR0);
 	SPSR = _BV(SPI2X);
 
 	memset(ws2801_data_buffer, 0x00, sizeof(ws2801_data_buffer));
@@ -159,7 +159,7 @@ status_t ws2801_update(void) {
  * next byte.
  * \details It is assumed that the ISR is only called in state WRITE_DATA
  */
-ISR(SPI_STC_vect, ISR_NOBLOCK) {
+ISR(SPI_STC_vect, ISR_BLOCK) {
 	ws2801_progress++;
 	if (ws2801_progress
 			< sizeof(ws2801_data_buffer) / sizeof(ws2801_data_buffer[0])) {
