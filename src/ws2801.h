@@ -69,7 +69,7 @@ status_t ws2801_setValue(uint8_t position, uint8_t red, uint8_t green,
 
 /**
  * \brief Updates the status of the LEDs according to the internal buffer.
- * \details The function will update the values as a background task. If the
+ * \details The function will update the values in a background task. If the
  * module is still busy with updating the last value, an error will be returned.
  * \returns The status of the operation.
  */

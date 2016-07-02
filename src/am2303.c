@@ -13,7 +13,7 @@
  *
  * \author Michael Spiegel, <michael.h.spiegel@gmail.com>
  *
- * Copyright (C) 2015 Michael Spiegel
+ * Copyright (C) 2016 Michael Spiegel
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -128,8 +128,8 @@ void am2303_startReading(uint8_t channel, am2303_readDone_t callback) {
 
 /**
  * \brief Performs a timed action
- * \details If the module's state is IDLE, the data line will be released and
- * further actions will be prepared. Otherwise an error will be reported by
+ * \details If the state of the module is IDLE, the data line will be released
+ * and further actions will be prepared. Otherwise an error will be reported by
  * calling the callback function.
  */
 ISR(TIMER0_OVF_vect, ISR_BLOCK) {

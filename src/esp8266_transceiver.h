@@ -77,5 +77,4 @@ void esp8266_transc_tick(void);
  */
 void esp8266_transc_send(uint8_t *buffer, uint8_t size);
 
-
 #endif /* ESP8266_TRANSCEIVER_H_ */

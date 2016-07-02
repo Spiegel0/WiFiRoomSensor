@@ -25,7 +25,8 @@
 /**
  * \brief The enumeration defines a status type
  * \details The enumeration encodes several different statii. Only the first
- * state, <code>success</code>, corresponds to a successfully completed operation.
+ * state, <code>success</code>, corresponds to a successfully completed
+ * operation.
  */
 typedef enum {
 	success = 0, ///< \brief The operation was finished successfully

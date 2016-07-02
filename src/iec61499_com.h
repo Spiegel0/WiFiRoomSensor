@@ -60,13 +60,13 @@ void iec61499_com_encodeINT(uint8_t *buffer, uint8_t size, uint8_t *nextIndex,
  * a status. It is executed iff err contains success. After the operation
  * finishes, err is updated with the result.
  * \param err The error variable
- * \param fkt The decoding conditioned function.
+ * \param fkt The conditioned decoding function.
  */
 #define IEC6199_COM_TRY(err,fkt) \
 	(err) = ((err) == success ? (fkt) : (err))
 
 /**
- * \brief tries to decode the next USINT value in the data buffer.
+ * \brief Tries to decode the next USINT value in the data buffer.
  * \details If the content of the buffer is invalid, an error will be returned
  * and no value will be written. The function also checks the size of the buffer
  * and prevents buffer overflows. It is assumed that every passed pointer is
@@ -88,7 +88,7 @@ status_t iec61499_com_decodeUSINT(uint8_t rrbID, uint8_t size,
 		uint8_t *nextIndex, uint8_t *value);
 
 /**
- * \brief tries to decode the next BOOL value in the data buffer.
+ * \brief Tries to decode the next BOOL value in the data buffer.
  * \details If the content of the buffer is invalid, an error will be returned
  * and no value will be written. The function also checks the size of the buffer
  * and prevents buffer overflows. It is assumed that every passed pointer is

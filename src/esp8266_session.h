@@ -8,7 +8,7 @@
  * directly in order to avoid data copy operations or costly wrapper functions.
  * However, the receive callback function still has to be set in this module.
  * </p>
- * <p> The chip will be configured as server which listens on the statically
+ * <p> The chip will be configured as a server which listens on the statically
  * configured port. </p>
  *
  * \author Michael Spiegel, <michael.h.spiegel@gmail.com>

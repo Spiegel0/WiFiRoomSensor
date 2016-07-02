@@ -1,7 +1,7 @@
 /**
  * \file soft_uart.c
  * \brief implements the software UA(R)T (transmission only)
- * \details The actual baud rate depends on the chips frequency. At 8MHz a baud
+ * \details The actual baud rate depends on the chip frequency. At 8MHz a baud
  * rate of approximately 115.2kHz is achieved. A transmission scheme of 8N1 is
  * maintained. The module occupies the following hardware:
  * <ul>

@@ -50,7 +50,7 @@ void system_timer_init(void);
  * \details If the timer is expired before the internal expired flag will be
  * reset. However, the function won't start the timer anew. The next indicated
  * event will not be influenced by the time system_timer_query() is executed. If
- * the timer is expired several times before the function is called, it will
+ * the timer was expired several times before the function is called, it will
  * only return one positive result.
  * \return Zero if no event was triggered, non-zero otherwise.
  */

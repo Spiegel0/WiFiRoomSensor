@@ -47,7 +47,7 @@ typedef enum {
 } main_sensorState_t;
 
 /**
- * \brief The state of the sensor modules
+ * \brief The state of the sensor module
  * \brief The variable may be written in an interrupt context. If it is not
  * IDLE, it must not be written outside the callback. Hence, the callback does
  * not need to synchronize the variable access.
@@ -113,8 +113,6 @@ void main_decodeWS2801Command(uint8_t size, uint8_t rrbID);
 
 int main(void) {
 
-	//DDRB |= _BV(PB1);
-
 	main_init();
 
 	sei();
@@ -149,8 +147,8 @@ int main(void) {
 
 /**
  * \brief Initializes the application and every sub module
- * \details It is assumed that interrupts are globally disabled when calling the
- * function.
+ * \details It is assumed that interrupts are globally disabled while calling
+ * the function.
  */
 static void main_init(void) {
 	oscillator_init();

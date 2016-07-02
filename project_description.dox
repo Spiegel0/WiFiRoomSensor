@@ -8,7 +8,11 @@
  * only the C source files of the microcontroller firmware and no other third 
  * party firmware is contained.
  *
- * The network settings are statically configured in the file network-config.h. A separate file which should not be part of the project holds the WiFi password. It has to be named <code>src/pwd.txt</code> and must contain the preprocessor definition <code>#define NW_CONFIG_PWD "..."</code> defining the correct password.
+ * The network settings are statically configured in the file network-config.h. 
+ * A separate file which should not be part of the project holds the WiFi 
+ * password. It has to be named <code>src/pwd.txt</code> and must contain the 
+ * preprocessor definition <code>#define NW_CONFIG_PWD "..."</code> defining 
+ * the correct password.
  *
  * \section main_org Code Organization
  *

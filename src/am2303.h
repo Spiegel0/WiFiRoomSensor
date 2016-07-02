@@ -2,9 +2,9 @@
  * \file am2303.h
  * \brief Reads the temperature and humidity value of a DHT22/am3203 sensor
  * \details The module implements an interrupt driven decoding function. It is
- * capable of decoding a single sensor at once. After a read cycle another
- * sensor might be queried. After the values are read or on error a callback
- * function is called.
+ * capable of decoding a single sensor at once. Another sensor may be queried
+ * after a read cycle. A callback function is called on completing the read
+ * cycle or on detecting an error.
  * \author Michael Spiegel, <michael.h.spiegel@gmail.com>
  *
  * Copyright (C) 2016 Michael Spiegel
@@ -33,10 +33,10 @@
 /**
  * \brief Defines a callback function type which indicates a completed read
  * cycle
- * \details The function may be called in an interrupt context. If an only if
- * the given status is <code>success</code>, the temperature and humidity variables
- * will contain valid values. The channel parameter indicates the requested
- * channel number.
+ * \details The function may be called in an interrupt context. If and only if
+ * the given status is <code>success</code>, the temperature and humidity
+ * variables will contain valid values. The channel parameter indicates the
+ * requested channel number.
  * \param status The status of the operation
  * \param temperature The received temperature value. If the status is not
  * successful, it may contain arbitrary content.

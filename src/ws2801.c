@@ -6,10 +6,10 @@
  * 	<li> SCK (PB5) </li>
  * 	<li> MISO (PB4), may stay unconnected </li>
  * 	<li> MOSI (PB3) </li>
- * 	<li> SS (PB2), may stay unconnected. It will be configures as an input with
+ * 	<li> SS (PB2), may stay unconnected. It will be configured as an input with
  * 	enabled pull ups. Do not drive low. After the ws2801_init function is
- * 	called, the pin may be configured as an output externally. Configuring as an
- * 	input and driving the pin low will result in an error.</li>
+ * 	called, the pin may be configured as an output externally. Configuring the
+ * 	pin as an	input and driving the pin low will result in an error.</li>
  * 	<li> SPI core </li>
  * </ul>
  * \author Michael Spiegel, <michael.h.spiegel@gmail.com>

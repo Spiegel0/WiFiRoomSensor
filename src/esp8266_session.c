@@ -287,9 +287,9 @@ void esp8266_session_timedTick(void) {
  * will not check any state nor if the transceiver is ready.
  * \param command_P The zero terminated string which resides in the program
  * memory space. It is assumed that the string fits into the buffer. Since the
- * command is statically allocated, its length will no be checked. It is assumed
- * that the command doesn't include the terminating charge return and newline
- * characters.
+ * command is statically allocated, its length will not be checked. It is
+ * assumed that the command doesn't include the terminating carriage return and
+ * newline characters.
  */
 static void esp8266_session_sendCommand_P(const char *command_P) {
 	uint8_t length;

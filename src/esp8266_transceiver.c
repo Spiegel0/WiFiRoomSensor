@@ -1,7 +1,6 @@
 /**
  * \file esp8266_transceiver.c
- * \brief The file implements the UART driver and implements simple decoding
- * tasks
+ * \brief The file implements the UART driver and a simple decoding tasks
  * \details The module demultiplexes the received input stream and decodes the
  * basic message content and basic status notifications. It deploys a message
  * buffer and out-sources the decoding logic into the main execution loop.
@@ -56,7 +55,7 @@ static uint8_t esp8266_transc_sendIndex;
 /**
  * \brief The index of the next echoed byte inside the send buffer
  * \details If the value is greater or equal than the
- * esp8266_transc_sendBufferSize value, than no data transmission is in
+ * esp8266_transc_sendBufferSize value, then no data transmission is in
  * progress and no echo is to be expected.
  */
 static uint8_t esp8266_transc_nextEcho;
@@ -81,8 +80,8 @@ static uint8_t esp8266_transc_rrFirst;
 /**
  * \brief The index of the first character in the round robin buffer which
  * hasn't been processed before.
- * \details The index is used to separate the processed region from the still
- * allocated region. It mustn't be read in an interrupt context. Hence,
+ * \details The index is used to separate the processed region from still
+ * allocated regions. It mustn't be read in an interrupt context. Hence,
  * synchronization is not necessary.
  */
 static uint8_t esp8266_transc_rrFirstUnprocessed;
@@ -423,8 +422,8 @@ static void esp8266_transc_decreaseBufferSync(void) {
 
 /**
  * \brief Converts the decimal string inside the rr-buffer into a number
- * \details It is expected that the string only contains valid character. The
- * buffer's content has to be checked before. The function does not handle
+ * \details It is expected that the string only contains valid characters. The
+ *  content of the buffer has to be checked before. The function does not handle
  * negative numbers or exponential notations. Furthermore, it is assumed that
  * all parameters are valid indices.
  * \param rrStart The index of the first character inside the round robin
