@@ -60,7 +60,9 @@ static enum {
 	INIT_MODE, ///< \brief Sets the wifi mode (AP, station, ...)
 	INIT_NETWORK, ///< \brief Configures the wireless network
 	SEND_INITIATED, ///< \brief Waits until the chip has acknowledged the request
-	SEND_DATA ///< \brief A sending operation is currently in progress
+	SEND_DATA, ///< \brief A sending operation is currently in progress
+	BROADCAST_INITIATED, ///< \brief Waits until the next request is confirmed
+	BROADCAST_DATA ///< \brief Sends the broadcast packet to the initiated channel
 } esp8266_session_state;
 
 /**
@@ -79,6 +81,9 @@ static esp8266_session_sendComplete_t esp8266_session_sendCompleteCB;
 static uint8_t *esp8266_session_sendBufferReference;
 /** \brief Holds the amount of bytes of data to send */
 static uint8_t esp8266_session_sendBufferSize;
+
+/** \brief Holds the current channel number during the broadcast operation. */
+static uint8_t esp8266_session_channelNr;
 
 /** \brief Persistent flag which indicates whether the chip is configured */
 uint8_t esp8266_session_chipConfigured EEMEM = 0;
@@ -105,6 +110,10 @@ const char esp8266_session_cmdNetwork[] PROGMEM = "AT+CWJAP=\""
 NW_CONFIG_NETWORK "\",\"" NW_CONFIG_PWD "\"";
 
 // Function definition
+static status_t esp8266_session_initSend(uint8_t channel, uint8_t *buffer,
+		uint8_t size);
+static void esp8266_session_initRepeatedSend(uint8_t channel);
+static void esp8266_session_dataSend(void);
 static void esp8266_session_statusReceived(status_t status);
 static void esp8266_session_sendCommand_P(const char *command_P);
 static void esp8266_session_handleInitError(void);
@@ -122,12 +131,63 @@ void esp8266_session_init(esp8266_transc_messageReceived messageCB) {
 
 status_t esp8266_session_send(uint8_t channel, uint8_t *buffer, uint8_t size,
 		esp8266_session_sendComplete_t sendCompleteCB) {
+	status_t err;
+
+	if (esp8266_session_state != IDLE)
+		return err_invalidState;
+
+	esp8266_session_sendCompleteCB = sendCompleteCB;
+
+	err = esp8266_session_initSend(channel, buffer, size);
+	if (err != success)
+		return err;
+
+	// The state can be safely changed after initiating the sending operation
+	// because the esp8266_session_statusReceived callback function will not be
+	// called in an interrupt context.
+	esp8266_session_state = SEND_INITIATED;
+
+	return success;
+}
+
+status_t esp8266_session_sendToAll(uint8_t *buffer, uint8_t size,
+		esp8266_session_sendComplete_t sendCompleteCB) {
+	status_t err;
+
+	if (esp8266_session_state != IDLE)
+		return err_invalidState;
+
+	esp8266_session_channelNr = 0;
+	esp8266_session_sendCompleteCB = sendCompleteCB;
+
+	err = esp8266_session_initSend(0, buffer, size);
+	if (err != success)
+		return err;
+
+	esp8266_session_state = BROADCAST_INITIATED;
+
+	return success;
+}
+
+/**
+ * \brief Initiates the sending operation and stores the data buffer.
+ * \details The function does not maintain the state variable of the module
+ * (\ref esp8266_session_state). It is assumed that the module is ready to
+ * transmit the message and that the \ref esp8266_session_buffer is free. The
+ * function sets the references to the given buffer and the system timeout.
+ * \param The channel number which is addressed by the transmission. The channel
+ * number is checked to be valid.
+ * \param A valid reference to the data buffer. It has to hold at least size
+ * bytes.
+ * \param size The number of bytes which reside in the given buffer.
+ * \return The status of the operation.
+ */
+static status_t esp8266_session_initSend(uint8_t channel, uint8_t *buffer,
+		uint8_t size) {
 	uint8_t nextIndex;
 
 	if (channel > 3)
 		return err_invalidChannel;
-	if (esp8266_session_state != IDLE)
-		return err_invalidState;
 
 	(void) strcpy_P((char*) esp8266_session_buffer, esp8266_session_cmdSend);
 	nextIndex = ESP8266_SESSION_CMD_SEND_LENGTH;
@@ -142,16 +202,37 @@ status_t esp8266_session_send(uint8_t channel, uint8_t *buffer, uint8_t size,
 	// be sent after the command. Every '\n' would be considered as part of the
 	// message.
 
-	esp8266_session_sendCompleteCB = sendCompleteCB;
 	esp8266_session_sendBufferReference = buffer;
 	esp8266_session_sendBufferSize = size;
 
 	esp8266_session_remainingTicks = SYSTEM_TIMER_MS_TO_TICKS(500);
-	esp8266_session_state = SEND_INITIATED;
 
 	esp8266_transc_send(esp8266_session_buffer, nextIndex);
 
 	return success;
+}
+
+/**
+ * \brief Initiates a repeated send operation.
+ * \details The function acts like \ref esp8266_session_initSend but takes the
+ * previously set send buffer.
+ * \see esp8266_session_initSend
+ * \param channel A valid channel number.
+ */
+static void esp8266_session_initRepeatedSend(uint8_t channel) {
+	(void) esp8266_session_initSend(channel, esp8266_session_sendBufferReference,
+			esp8266_session_sendBufferSize);
+}
+
+/**
+ * \brief Transmits the previously registered data
+ * \details The function must be called if the err_inputExpected status is
+ * received after calling \ref esp8266_session_initSend. It pushes the
+ * registered data buffer to the transceiver and returns immediately.
+ */
+static void esp8266_session_dataSend(void) {
+	esp8266_transc_send(esp8266_session_sendBufferReference,
+			esp8266_session_sendBufferSize);
 }
 
 /**
@@ -203,8 +284,7 @@ static void esp8266_session_statusReceived(status_t status) {
 	case SEND_INITIATED: // ------------------------------------------------------
 		if (status == err_inputExpected) {
 			esp8266_session_state = SEND_DATA;
-			esp8266_transc_send(esp8266_session_sendBufferReference,
-					esp8266_session_sendBufferSize);
+			esp8266_session_dataSend();
 		} else {
 			esp8266_session_sendCompleteCB(status);
 			esp8266_session_state = IDLE;
@@ -214,6 +294,34 @@ static void esp8266_session_statusReceived(status_t status) {
 	case SEND_DATA: // -----------------------------------------------------------
 		esp8266_session_sendCompleteCB(status);
 		esp8266_session_state = IDLE;
+		break;
+
+	case BROADCAST_INITIATED: // -------------------------------------------------
+		// TODO: Differentiate between invalid channel and other errors
+		if (status == err_inputExpected) {
+			esp8266_session_state = BROADCAST_DATA;
+			esp8266_session_dataSend();
+
+		} else if (esp8266_session_channelNr < 3) {
+			esp8266_session_channelNr++;
+			esp8266_session_initRepeatedSend(esp8266_session_channelNr);
+			esp8266_session_state = BROADCAST_INITIATED;
+
+		} else {
+			esp8266_session_sendCompleteCB(success);
+			esp8266_session_state = IDLE;
+		}
+		break;
+
+	case BROADCAST_DATA: // ------------------------------------------------------
+		if (status == success && esp8266_session_channelNr < 3) {
+			esp8266_session_channelNr++;
+			esp8266_session_initRepeatedSend(esp8266_session_channelNr);
+			esp8266_session_state = BROADCAST_INITIATED;
+		} else {
+			esp8266_session_sendCompleteCB(success);
+			esp8266_session_state = IDLE;
+		}
 		break;
 
 	default: // ------------------------------------------------------------------
@@ -266,6 +374,8 @@ void esp8266_session_timedTick(void) {
 
 		case SEND_INITIATED: // ----------------------------------------------------
 		case SEND_DATA:
+		case BROADCAST_INITIATED:
+		case BROADCAST_DATA:
 			esp8266_transc_send((void*) 0, 0); // Frees the buffer
 			esp8266_session_sendCompleteCB(err_timeout);
 			esp8266_session_state = IDLE;

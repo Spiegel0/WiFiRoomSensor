@@ -82,6 +82,25 @@ status_t esp8266_session_send(uint8_t channel, uint8_t *buffer, uint8_t size,
 		esp8266_session_sendComplete_t sendCompleteCB);
 
 /**
+ * \brief Sends the given message to all connected clients
+ * \details The buffer must remain valid until the send complete callback is
+ * executed. It is not allowed to send more than one message at once. Hence, the
+ * function may not be called until the callback function is executed. It is
+ * assumed that the reference to the message is valid. The operation is aborted
+ * on receiving the error from the transceiver.
+ * \param buffer A pointer to the data buffer. It has to hold at least size
+ * elements and must be valid until sendCompleteCB is executed.
+ * \param size The number of bytes to send
+ * \param sendCompleteCB The callback function which is executed if the sending
+ * operation finishes. If the function \ref esp8266_session_sendToAll doesn't
+ * return successfully, then the callback won't be executed. It is assumed that
+ * the reference always points to a valid location.
+ * \return success if the operation is started successfully.
+ */
+status_t esp8266_session_sendToAll(uint8_t *buffer, uint8_t size,
+		esp8266_session_sendComplete_t sendCompleteCB);
+
+/**
  * \brief Manages timeouts and waiting
  * \details The function has to be called periodically from a non-interrupt
  * context. It is expected that is is called whenever the system timer expires.
