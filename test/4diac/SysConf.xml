@@ -1102,7 +1102,7 @@
         </varDeclarations>
       </resource>
       <varDeclarations name="BOUNDS" comment="Initial[x,y,width,height]" isInput="true" arraySize="4" typeName="DINT" array="true">
-        <value value="[50,50,900, 40]"/>
+        <value value="[50,50,1000, 40]"/>
       </varDeclarations>
       <varDeclarations name="GRID" comment="Grid layout[rows,cols]" isInput="true" arraySize="2" typeName="DINT" array="true">
         <value/>
