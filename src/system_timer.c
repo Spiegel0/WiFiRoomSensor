@@ -36,21 +36,25 @@
 
 /** \brief Structure which encapsulates the data of the module */
 volatile static struct {
+	/** \brief An internal counter which further divides the timer frequency */
+	uint8_t cnt :7;
 	/** \brief A flag which indicates that the timer has been triggered before */
 	int8_t fired :1;
-	/** \brief An internal counter which further divides the timer frequency */
-	uint8_t cnt :6;
+	/** \brief A flag which indicates that the fast timer has been triggered */
+	int8_t fastFired :1;
+
 } system_timer_data;
 
 void system_timer_init(void) {
 
-	TCCR2 = _BV(CS22) | _BV(CS21) | _BV(CS20);
+	TCCR2 = _BV(CS22) | _BV(CS20);
 	ASSR = 0;
 
 	TIFR = _BV(TOV2); // Clear interrupt flag
 	TIMSK |= _BV(TOIE2);
 
 	system_timer_data.fired = 0;
+	system_timer_data.fastFired = 0;
 	system_timer_data.cnt = 0;
 }
 
@@ -59,10 +63,11 @@ void system_timer_init(void) {
  */
 ISR(TIMER2_OVF_vect, ISR_BLOCK) {
 
+	system_timer_data.fastFired = 1;
 	system_timer_data.cnt++;
 
 	if (system_timer_data.cnt >=
-			(F_CPU / 1000UL * SYSTEM_TIMER_PERIOD_MS / 256UL / 1024UL)) {
+			(F_CPU / 1000UL * SYSTEM_TIMER_PERIOD_MS / 256UL / 128UL)) {
 		system_timer_data.fired = 1;
 		system_timer_data.cnt = 0;
 	}
@@ -73,6 +78,15 @@ uint8_t system_timer_query(void) {
 	ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
 		ret = system_timer_data.fired;
 		system_timer_data.fired = 0;
+	}
+	return ret;
+}
+
+uint8_t system_timer_queryFast(void) {
+	uint8_t ret;
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE){
+		ret = system_timer_data.fastFired;
+		system_timer_data.fastFired = 0;
 	}
 	return ret;
 }
