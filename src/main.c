@@ -4,7 +4,8 @@
  * \details The main file implements the main application logic. It queries the
  * sensors and responds to any request. If the preprocessor variable
  * USE_AM2303_CHN1 is defined, the second sensor channel will be queried.
- * Similarly, defining the variable USE_WS2801 will enable the LED controller.
+ * Similarly, defining the variable USE_WS2801 will enable the LED controller
+ * and defining USE_BUTTON_CNT will enable the user input module.
  *
  * \author Michael Spiegel, <michael.h.spiegel@gmail.com>
  *
@@ -32,6 +33,7 @@
 #include "debug.h"
 #include "oscillator.h"
 #include "ws2801.h"
+#include "button_cnt.h"
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -92,6 +94,7 @@ static struct {
 	 * \details The bit number corresponds to the network channel
 	 */
 	uint8_t requestFlags :4;
+	// TODO: Add button state which indicates a broadcast requests
 	/** \brief Flag which indicates whether the message buffer is busy */
 	int8_t bufferBusy :1;
 } main_data;
@@ -107,6 +110,9 @@ static void main_sendReply(uint8_t channel);
 void main_freeReplyBuffer(status_t status);
 void main_decodeMessage(status_t status, uint8_t channel, uint8_t size,
 		uint8_t rrbID);
+#ifdef USE_BUTTON_CNT
+void main_handleButtonEvent(int16_t cnt, uint8_t btn);
+#endif
 #ifdef USE_WS2801
 void main_decodeWS2801Command(uint8_t size, uint8_t rrbID);
 #endif
@@ -118,7 +124,7 @@ int main(void) {
 	sei();
 
 	DEBUG_INIT
-		;
+	;
 	DEBUG_PRINT_START(0x00);
 	DEBUG_BYTE(0x01);
 	DEBUG_BYTE(0x02);
@@ -133,6 +139,15 @@ int main(void) {
 	while (1) {
 		esp8266_transc_tick();
 		main_tick();
+
+#ifdef USE_BUTTON_CNT
+		// Fast timer tick
+		if (system_timer_queryFast()) {
+			button_cnt_timedFastTick();
+		}
+#endif
+
+		// Standard timer tick
 		if (system_timer_query()) {
 			esp8266_session_timedTick();
 			main_timedTick();
@@ -153,6 +168,9 @@ int main(void) {
 static void main_init(void) {
 	oscillator_init();
 	system_timer_init();
+#ifdef USE_BUTTON_CNT
+	button_cnt_init(main_handleButtonEvent);
+#endif
 #ifdef USE_WS2801
 	ws2801_init();
 #endif
@@ -368,6 +386,17 @@ void main_recordData(status_t status, uint16_t temperature, uint16_t humidity,
 	}
 
 	DEBUG_PRINT(0x02, status);
+}
+#endif
+
+#ifdef USE_BUTTON_CNT
+/**
+ * \brief Registers the button event to be sent as soon as possible
+ */
+void main_handleButtonEvent(int16_t cnt, uint8_t btn){
+	// TODO: Implement
+	DEBUG_PRINT(0x04,cnt);
+	DEBUG_PRINT(0x05,btn);
 }
 #endif
 
