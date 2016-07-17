@@ -94,7 +94,8 @@ static struct {
 	 * \details The bit number corresponds to the network channel
 	 */
 	uint8_t requestFlags :4;
-	// TODO: Add button state which indicates a broadcast requests
+	/** \brief Flags which indicate pressed buttons */
+	uint8_t buttonFlags :3;
 	/** \brief Flag which indicates whether the message buffer is busy */
 	int8_t bufferBusy :1;
 } main_data;
@@ -106,7 +107,7 @@ static void main_tick(void);
 static void main_fetchData(void);
 void main_recordData(status_t status, uint16_t temperature, uint16_t humidity,
 		uint8_t channel);
-static void main_sendReply(uint8_t channel);
+static void main_sendData(uint8_t channel);
 void main_freeReplyBuffer(status_t status);
 void main_decodeMessage(status_t status, uint8_t channel, uint8_t size,
 		uint8_t rrbID);
@@ -199,8 +200,16 @@ static void main_tick(void) {
 		sensorState = main_sensor_state;
 	}
 
-	if (sensorState == IDLE && main_data.requestFlags) {
+	if (main_data.buttonFlags && !main_data.bufferBusy) {
 
+		// Push data initiated by the user
+		DEBUG_PRINT(0x03, main_data.buttonFlags);
+		main_sendData(0xFF);
+		main_data.buttonFlags = 0;
+
+	} else if (sensorState == IDLE && main_data.requestFlags) {
+
+		// Data requested by a connected client
 		DEBUG_PRINT(0x01, main_data.requestFlags);
 
 		if (main_am2303_lockedTicks == 0) {
@@ -213,25 +222,26 @@ static void main_tick(void) {
 			}
 			main_data.requestFlags &= ~(1 << chn);
 
-			main_sendReply(chn);
+			main_sendData(chn);
 		}
 	}
 
 }
 
 /**
- * \brief Assembles a reply message and initiates the transmission
+ * \brief Assembles a data message and initiates the transmission
  * \details It is assumed that the bufferBusy flag is cleared before calling the
  * function. Any transmission error will be ignored. The connected client has to
  * initiate a re-transmission if the server fails.
  * \param channel A valid channel identifier which specifies the destination
- * channel.
+ * channel or 0xFF to send a broadcast message
  */
-static void main_sendReply(uint8_t channel) {
+static void main_sendData(uint8_t channel) {
 	static uint8_t replyBuffer[4 * IEC61499_COM_INT_ENC_SIZE];
 	uint8_t nextIndex = 0;
 	status_t status;
 
+	// Encodes the values
 	iec61499_com_encodeINT(replyBuffer,
 			sizeof(replyBuffer) / sizeof(replyBuffer[0]), &nextIndex,
 			main_am2303_temperature_chn0);
@@ -246,9 +256,23 @@ static void main_sendReply(uint8_t channel) {
 			sizeof(replyBuffer) / sizeof(replyBuffer[0]), &nextIndex,
 			main_am2303_humidity_chn1);
 #endif
+#ifdef USE_BUTTON_CNT
+	iec61499_com_encodeINT(replyBuffer,
+			sizeof(replyBuffer) / sizeof(replyBuffer[0]), &nextIndex,
+			button_cnt_getCounter());
+	iec61499_com_encodeINT(replyBuffer,
+			sizeof(replyBuffer) / sizeof(replyBuffer[0]), &nextIndex,
+			(int16_t) main_data.buttonFlags);
+#endif
 
-	status = esp8266_session_send(channel, replyBuffer, nextIndex,
-			main_freeReplyBuffer);
+	// Sends the message
+	if (channel == 0xFF) {
+		status = esp8266_session_sendToAll(replyBuffer, nextIndex,
+				main_freeReplyBuffer);
+	} else {
+		status = esp8266_session_send(channel, replyBuffer, nextIndex,
+				main_freeReplyBuffer);
+	}
 
 	if (status == success) {
 		main_data.bufferBusy = 1;
@@ -393,10 +417,8 @@ void main_recordData(status_t status, uint16_t temperature, uint16_t humidity,
 /**
  * \brief Registers the button event to be sent as soon as possible
  */
-void main_handleButtonEvent(int16_t cnt, uint8_t btn){
-	// TODO: Implement
-	DEBUG_PRINT(0x04,cnt);
-	DEBUG_PRINT(0x05,btn);
+void main_handleButtonEvent(int16_t cnt, uint8_t btn) {
+	main_data.buttonFlags |= btn;
 }
 #endif
 
