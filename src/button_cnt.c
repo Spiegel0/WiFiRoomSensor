@@ -104,3 +104,7 @@ void button_cnt_timedFastTick(void) {
 		button_cnt_callback(button_cnt_value, pressed);
 	}
 }
+
+uint16_t button_cnt_getCounter(void) {
+	return button_cnt_value;
+}

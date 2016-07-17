@@ -41,7 +41,7 @@ typedef void (*button_cnt_callback_t)(int16_t cnt, uint8_t btn);
  * \brief Initializes the module and registers the callback function.
  * \details The function has to be called before any other function is used. The
  * registered callback is executed in a non-interrupt context only. It is called
- * when a button was pressed.
+ * as soon as a button is pressed.
  * \param callback The callback function which indicates a user action.
  */
 void button_cnt_init(button_cnt_callback_t callback);
